@@ -48,3 +48,5 @@ users/{userId}/entries/{entryId}
 ---
 
 Based on Sebasi Talk #1134 by Prof. Kim Kyung-il (Ajou University, Psychology)
+
+<!-- deploy: 2026-07-03 date-fix + dashboard -->
