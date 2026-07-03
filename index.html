@@ -3,119 +3,228 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>💤 수면 트래커 — 나만의 최적 수면 탐색기</title>
+<title>💤 수면 & 건강 트래커</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0d1b2a;--card:#1a2d40;--card2:#243d55;
   --gold:#c9a96e;--gold-l:#e8c98a;--text:#e8edf5;--muted:#8ba3b8;
-  --green:#66bb6a;--orange:#ffa726;--red:#ef5350;
+  --green:#66bb6a;--orange:#ffa726;--red:#ef5350;--blue:#4fc3f7;
   --border:rgba(201,169,110,0.2);--r:12px;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:72px;-webkit-tap-highlight-color:transparent}
-.hdr{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,#0d1b2a 80%,rgba(13,27,42,0));padding:14px 20px 10px;text-align:center;border-bottom:1px solid var(--border)}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,#0d1b2a 85%,rgba(13,27,42,0));padding:14px 20px 10px;text-align:center;border-bottom:1px solid var(--border)}
 .hdr h1{font-size:17px;font-weight:700;color:var(--gold);letter-spacing:-.3px}
 .hdr p{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Sync bar */
 #syncBar{text-align:center;font-size:11px;padding:5px 16px;transition:all .3s}
 .s-ok{color:var(--green)}.s-sync{color:var(--orange)}.s-err{color:var(--red)}.s-off{color:var(--muted)}
+
+/* Bottom nav */
 .bnav{position:fixed;bottom:0;left:0;right:0;z-index:200;display:flex;background:#0a1622;border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0)}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px 6px;background:none;border:none;color:var(--muted);font-size:9px;gap:3px;cursor:pointer;transition:color .2s}
-.nb .ic{font-size:20px;line-height:1}.nb.on{color:var(--gold)}
+.nb .ic{font-size:19px;line-height:1}.nb.on{color:var(--gold)}
+
+/* Panels */
 .pan{display:none;padding:14px;max-width:600px;margin:0 auto}.pan.on{display:block}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
 .ctitle{font-size:12px;color:var(--gold);font-weight:600;letter-spacing:.3px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+
+/* Form */
 .fg{margin-bottom:14px}
 .fl{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px}
-.fi{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s;appearance:none}
+.fi{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s;appearance:none;-webkit-appearance:none}
 .fi:focus{border-color:var(--gold)}.fi::placeholder{color:var(--muted)}
 input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
-.sl-wrap{display:flex;align-items:center;gap:10px}
-.sl{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--card2);outline:none;cursor:pointer}
-.sl::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--gold);cursor:pointer;box-shadow:0 0 0 4px rgba(201,169,110,.15)}
-.sl-val{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:18px;font-weight:700;color:var(--gold);min-width:70px;text-align:center}
+
+/* Number input with +/- stepper */
+.num-wrap{display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card2)}
+.num-btn{width:44px;height:44px;background:var(--card2);border:none;color:var(--gold);font-size:22px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.num-btn:hover{background:#2e4d6a}
+.num-btn:active{background:#3a5f80}
+.num-input{flex:1;background:transparent;border:none;color:var(--text);font-size:20px;font-weight:700;text-align:center;outline:none;padding:10px 4px;font-variant-numeric:tabular-nums}
+.num-unit{font-size:13px;color:var(--muted);padding-right:12px;font-weight:500;flex-shrink:0}
+
+/* Two-col input row */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Mood grid */
 .mgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
 .mb{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .mb.on{background:var(--gold);color:#0d1b2a;border-color:var(--gold)}.mb:hover:not(.on){border-color:var(--gold);color:var(--gold)}
+
+/* Buttons */
 .btn{width:100%;padding:14px;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
 .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#0d1b2a}.btn-red{background:#ef5350;color:#fff}
 .btn:hover{opacity:.9}.btn:active{opacity:.8}
-.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+
+/* Stats */
+.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.sgrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
 @media(min-width:480px){.sgrid{grid-template-columns:repeat(4,1fr)}}
-.scard{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px 10px;text-align:center}
-.sv{font-size:26px;font-weight:700;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
-.su{font-size:12px;color:var(--muted)}.sl2{font-size:11px;color:var(--muted);margin-top:4px}
-.ch{position:relative;height:190px;width:100%}
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{background:var(--card2);color:var(--gold);padding:8px 6px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border)}
-.tbl td{padding:9px 6px;text-align:center;border-bottom:1px solid rgba(255,255,255,.04);font-variant-numeric:tabular-nums}
+.scard{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center}
+.sv{font-size:24px;font-weight:700;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+.su{font-size:11px;color:var(--muted)}.sl2{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* Chart */
+.ch{position:relative;height:180px;width:100%}
+
+/* Section divider inside card */
+.sec-div{height:1px;background:var(--border);margin:14px 0}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:var(--card2);color:var(--gold);padding:7px 4px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.tbl td{padding:8px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,.04);font-variant-numeric:tabular-nums}
 .tbl tr:hover td{background:rgba(201,169,110,.04)}
-.dbtn{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 6px}
+.dbtn{background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 4px}
+
+/* Month nav */
 .mnav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
 .marr{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:6px 16px;border-radius:8px;cursor:pointer;font-size:18px}
 .marr:hover{border-color:var(--gold)}.mdisp{font-size:16px;font-weight:700;color:var(--gold);min-width:110px;text-align:center}
-.optcard{background:linear-gradient(135deg,#1a2d40,#1d3a56);border:1px solid var(--gold);border-radius:16px;padding:22px 20px;text-align:center;margin-bottom:12px}
-.opth{font-size:56px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:-2px}
-.optl{font-size:12px;color:var(--muted);margin-top:6px}.optd{font-size:13px;color:var(--text);margin-top:12px;line-height:1.7}
-.brow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.blbl{font-size:12px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}
-.bout{flex:1;background:var(--card2);border-radius:4px;height:10px;overflow:hidden}
-.bin{height:10px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold-l))}
-.bval{font-size:12px;color:var(--gold);width:32px;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* Optimal */
+.optcard{background:linear-gradient(135deg,#1a2d40,#1d3a56);border:1px solid var(--gold);border-radius:16px;padding:20px;text-align:center;margin-bottom:12px}
+.opth{font-size:52px;font-weight:800;color:var(--gold);line-height:1;letter-spacing:-2px}
+.optl{font-size:12px;color:var(--muted);margin-top:5px}.optd{font-size:13px;color:var(--text);margin-top:10px;line-height:1.7}
+
+/* Bar rows */
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.blbl{font-size:11px;color:var(--muted);width:48px;text-align:right;flex-shrink:0}
+.bout{flex:1;background:var(--card2);border-radius:4px;height:9px;overflow:hidden}
+.bin{height:9px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold-l))}
+.bval{font-size:11px;color:var(--gold);width:30px;flex-shrink:0;font-variant-numeric:tabular-nums}
 .bcnt{font-size:10px;color:var(--muted)}
-.bdg{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600}
+
+/* Badge */
+.bdg{display:inline-block;padding:2px 6px;border-radius:10px;font-size:10px;font-weight:600}
 .bg{background:rgba(102,187,106,.18);color:var(--green)}.bo{background:rgba(255,167,38,.18);color:var(--orange)}.br{background:rgba(239,83,80,.18);color:var(--red)}
+.bb{background:rgba(79,195,247,.18);color:var(--blue)}
+
+/* Info box */
 .ibox{background:rgba(201,169,110,.07);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);line-height:1.75;margin-bottom:12px}
 .ibox strong{color:var(--gold)}
+
+/* Settings textarea */
 .sta{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:12px;font-family:monospace;outline:none;resize:none;height:42px}
 .sta:focus{border-color:var(--gold)}
+
+/* Toast */
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--gold);color:var(--text);padding:10px 20px;border-radius:20px;font-size:13px;z-index:500;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1}
-.empty{text-align:center;padding:40px 20px}.empty .ei{font-size:48px;margin-bottom:12px}.empty p{font-size:14px;color:var(--muted);line-height:1.7}
-.qb{border-left:3px solid var(--gold);padding:12px 16px;background:rgba(201,169,110,.06);border-radius:0 8px 8px 0;font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px}
+
+/* Empty */
+.empty{text-align:center;padding:36px 20px}.empty .ei{font-size:44px;margin-bottom:10px}.empty p{font-size:13px;color:var(--muted);line-height:1.7}
+
+/* Quote */
+.qb{border-left:3px solid var(--gold);padding:11px 14px;background:rgba(201,169,110,.06);border-radius:0 8px 8px 0;font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px}
+
+/* Setup steps */
 .step{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
 .step-num{background:var(--gold);color:#0d1b2a;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px}
 .step-text{font-size:12px;color:var(--muted);line-height:1.6}.step-text strong{color:var(--text)}
+
+/* Highlight value */
+.hval{color:var(--gold);font-weight:700}
 </style>
 </head>
 <body>
 
 <header class="hdr">
-  <h1>💤 수면 트래커</h1>
-  <p>나만의 최적 수면 시간을 찾아가는 여정</p>
+  <h1>💤 수면 &amp; 건강 트래커</h1>
+  <p>수면 · 몸무게 · 공복혈당 — 나만의 최적 루틴 찾기</p>
 </header>
 
-<div id="syncBar" class="s-off">⚫ 로컬 모드 — 토큰 설정 시 GitHub 동기화 활성화</div>
+<div id="syncBar" class="s-off">⚫ 로컬 모드</div>
 
-<!-- TAB: 기록 -->
+<!-- ══ TAB: 기록 ══ -->
 <div id="pan-record" class="pan on">
+
+  <!-- 수면 기록 -->
   <div class="card">
-    <div class="ctitle">📝 오늘의 수면 기록</div>
-    <div class="fg"><label class="fl">📅 날짜</label><input type="date" id="eDate" class="fi"></div>
+    <div class="ctitle">🌙 수면 기록</div>
+
     <div class="fg">
-      <label class="fl">🌙 수면 시간</label>
-      <div class="sl-wrap">
-        <input type="range" id="eSlider" class="sl" min="3" max="12" step="0.5" value="7">
-        <div class="sl-val" id="eSliderVal">7.0h</div>
+      <label class="fl">📅 날짜</label>
+      <input type="date" id="eDate" class="fi">
+    </div>
+
+    <div class="row2">
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">🌙 수면 시간</label>
+        <div class="num-wrap">
+          <button class="num-btn" data-target="eSleep" data-step="0.5" data-dir="-1">−</button>
+          <input type="number" id="eSleep" class="num-input" value="7.0" min="2" max="14" step="0.5">
+          <span class="num-unit">h</span>
+          <button class="num-btn" data-target="eSleep" data-step="0.5" data-dir="1">+</button>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">⌚ 워치 점수</label>
+        <div class="num-wrap">
+          <button class="num-btn" data-target="eWatch" data-step="1" data-dir="-1">−</button>
+          <input type="number" id="eWatch" class="num-input" placeholder="—" min="0" max="100" step="1">
+          <span class="num-unit">점</span>
+          <button class="num-btn" data-target="eWatch" data-step="1" data-dir="1">+</button>
+        </div>
       </div>
     </div>
-    <div class="fg"><label class="fl">⌚ 애플워치 수면 점수 <span style="color:var(--muted);font-weight:400">(0–100, 선택)</span></label><input type="number" id="eWatch" class="fi" placeholder="예: 82" min="0" max="100"></div>
-    <div class="fg">
+
+    <div class="fg" style="margin-top:14px">
       <label class="fl">😊 오늘의 기분 점수 (1–10)</label>
       <div class="mgrid" id="moodGrid"></div>
     </div>
-    <div class="fg"><label class="fl">💬 메모 <span style="color:var(--muted);font-weight:400">(선택)</span></label><input type="text" id="eMemo" class="fi" placeholder="오늘 특이사항..."></div>
-    <button class="btn btn-gold" id="saveBtn">💾 기록 저장</button>
+
+    <div class="fg">
+      <label class="fl">💬 메모 <span style="color:var(--muted);font-weight:400">(선택)</span></label>
+      <input type="text" id="eMemo" class="fi" placeholder="오늘 특이사항...">
+    </div>
+
+    <button class="btn btn-gold" id="saveBtn">💾 수면 기록 저장</button>
   </div>
+
+  <!-- 건강 기록 -->
+  <div class="card">
+    <div class="ctitle">🩺 건강 기록</div>
+
+    <div class="row2">
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">⚖️ 몸무게</label>
+        <div class="num-wrap">
+          <button class="num-btn" data-target="eWeight" data-step="0.1" data-dir="-1">−</button>
+          <input type="number" id="eWeight" class="num-input" placeholder="—" min="30" max="200" step="0.1">
+          <span class="num-unit">kg</span>
+          <button class="num-btn" data-target="eWeight" data-step="0.1" data-dir="1">+</button>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">🩸 공복혈당</label>
+        <div class="num-wrap">
+          <button class="num-btn" data-target="eGlucose" data-step="1" data-dir="-1">−</button>
+          <input type="number" id="eGlucose" class="num-input" placeholder="—" min="50" max="400" step="1">
+          <span class="num-unit">mg</span>
+          <button class="num-btn" data-target="eGlucose" data-step="1" data-dir="1">+</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-gold" id="saveHealthBtn" style="margin-top:14px">💾 건강 기록 저장</button>
+  </div>
+
   <div id="todayCard"></div>
 </div>
 
-<!-- TAB: 대시보드 -->
+<!-- ══ TAB: 대시보드 ══ -->
 <div id="pan-dash" class="pan">
   <div id="dashCont"><div class="empty"><div class="ei">📊</div><p>기록을 시작하면<br>대시보드가 표시됩니다</p></div></div>
 </div>
 
-<!-- TAB: 월별 -->
+<!-- ══ TAB: 월별 ══ -->
 <div id="pan-month" class="pan">
   <div class="mnav">
     <button class="marr" id="mPrev">‹</button>
@@ -125,50 +234,35 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
   <div id="monthCont"><div class="empty"><div class="ei">📅</div><p>이 달의 기록이 없습니다</p></div></div>
 </div>
 
-<!-- TAB: 분석 -->
+<!-- ══ TAB: 분석 ══ -->
 <div id="pan-analysis" class="pan">
   <div id="analysisCont"><div class="empty"><div class="ei">🎯</div><p>최소 <strong style="color:var(--gold)">7일</strong> 이상 기록하면<br>최적 수면 분석이 시작됩니다</p></div></div>
 </div>
 
-<!-- TAB: 설정 -->
+<!-- ══ TAB: 설정 ══ -->
 <div id="pan-settings" class="pan">
-
   <div class="card">
     <div class="ctitle">🔑 GitHub 토큰 동기화</div>
     <div class="ibox">
-      <strong>모든 기기에서 같은 GitHub 토큰</strong>을 입력하면 실시간 동기화됩니다.<br>
-      토큰 1회 입력으로 영구 사용 — 추가 가입 불필요
+      <strong>모든 기기에서 같은 GitHub 토큰</strong>을 입력하면 30초마다 실시간 동기화됩니다.
     </div>
-
     <div style="margin-bottom:16px">
       <div class="step"><div class="step-num">1</div><div class="step-text"><strong>github.com → Settings → Developer settings</strong><br>→ Personal access tokens → Tokens (classic)</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Generate new token (classic)</strong> 클릭<br>→ Note: "수면트래커" → Expiration: No expiration</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">Select scopes: <strong>gist</strong> 체크 ✓ → Generate token</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Generate new token</strong> → Note: 수면트래커 → Expiration: No expiration</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Scopes: <strong>gist</strong> ✓ → Generate token</div></div>
       <div class="step"><div class="step-num">4</div><div class="step-text">발급된 토큰(ghp_...)을 아래에 붙여넣기</div></div>
     </div>
-
-    <div class="fg">
-      <label class="fl">GitHub Personal Access Token</label>
-      <textarea id="sToken" class="sta" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></textarea>
-    </div>
+    <div class="fg"><label class="fl">GitHub Personal Access Token</label><textarea id="sToken" class="sta" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></textarea></div>
     <button class="btn btn-gold" id="connectBtn">🔗 연결하기</button>
   </div>
-
   <div class="card" id="syncStatusCard" style="display:none">
     <div class="ctitle">📡 동기화 상태</div>
     <div id="syncDetail" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
   </div>
-
   <div class="card">
     <div class="ctitle">📱 멀티디바이스 사용법</div>
-    <div class="ibox">
-      <strong>iPhone · iPad · PC</strong> 모두 같은 URL로 접속 후<br>
-      ⚙️ 설정 탭에서 동일한 GitHub 토큰 입력<br><br>
-      URL: <strong>https://yjjn2005.github.io/sleep-tracker/</strong><br>
-      데이터는 30초마다 자동 동기화됩니다
-    </div>
+    <div class="ibox">URL: <strong>https://yjjn2005.github.io/sleep-tracker/</strong><br>모든 기기에서 같은 URL + 같은 GitHub 토큰 입력<br>데이터는 30초마다 자동 동기화됩니다</div>
   </div>
-
   <div class="card">
     <div class="ctitle">🗑️ 데이터 관리</div>
     <button class="btn btn-red" id="clearBtn">로컬 캐시 초기화</button>
@@ -182,126 +276,137 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
   <button class="nb" data-tab="analysis"><span class="ic">🎯</span>분석</button>
   <button class="nb" data-tab="settings"><span class="ic">⚙️</span>설정</button>
 </nav>
-
 <div id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════
-//  수면 트래커 — GitHub Gist 동기화 버전
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════════
+//  수면 & 건강 트래커  —  GitHub Gist Sync
+// ════════════════════════════════════════════
 
 const GIST_ID   = 'd393d08153aa5ef8c17ea766cf0f872e';
 const GIST_FILE = 'sleep-data.json';
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
-const POLL_MS   = 30000; // 30초 폴링
+const POLL_MS   = 30000;
 
-let entries = [];
-let ghToken = ls('sleepTracker_token') || '';
-let selMood = 0;
+let entries  = [];   // sleep entries
+let health   = [];   // health entries (weight, glucose)
+let ghToken  = ls('sleepTracker_token') || '';
+let selMood  = 0;
 let curMonth = new Date();
 const charts = {};
-let pollTimer = null;
-let lastEtag = '';
+let pollTimer = null, lastEtag = '';
 
-// ── Helpers ──────────────────────────────────
-function ls(k)    { try { return localStorage.getItem(k) } catch { return null } }
-function lsSet(k,v){ try { localStorage.setItem(k,v) } catch {} }
-const today = () => new Date().toISOString().split('T')[0];
-const fmtH  = v  => parseFloat(v).toFixed(1) + 'h';
-const avg   = a  => a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0;
-const pad   = n  => String(n).padStart(2,'0');
+// ── Utils ─────────────────────────────────
+function ls(k){ try{return localStorage.getItem(k)}catch{return null} }
+function lsSet(k,v){ try{localStorage.setItem(k,v)}catch{} }
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+};
+const pad  = n => String(n).padStart(2,'0');
+const avg  = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0;
+const fmtH = v => parseFloat(v).toFixed(1);
 
 function moodColor(s){ return s>=8?'var(--green)':s>=5?'var(--orange)':'var(--red)' }
 function moodBadge(s){ return s>=8?'bg':s>=5?'bo':'br' }
+function glucoseBadge(g){
+  if(!g) return '';
+  if(g < 100) return '<span class="bdg bg">정상</span>';
+  if(g < 126) return '<span class="bdg bo">주의</span>';
+  return '<span class="bdg br">高</span>';
+}
 
-function setSync(cls,msg){
-  const el=document.getElementById('syncBar');
-  el.className=`s-${cls}`;el.textContent=msg;
-}
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('on');
-  setTimeout(()=>t.classList.remove('on'),2600);
-}
+function setSync(cls,msg){ const e=document.getElementById('syncBar'); e.className=`s-${cls}`;e.textContent=msg }
+function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2600) }
 function killChart(n){ if(charts[n]){charts[n].destroy();delete charts[n]} }
 function mkChart(n,ctx,cfg){ killChart(n);charts[n]=new Chart(ctx,cfg) }
 
-// ── GitHub Gist API ───────────────────────────
-function ghHeaders(extra){
-  return { Authorization:`token ${ghToken}`, 'Content-Type':'application/json', ...extra };
-}
+// ── Gist API ──────────────────────────────
+const ghH = () => ({ Authorization:`token ${ghToken}`, 'Content-Type':'application/json' });
 
 async function loadGist(){
-  const res = await fetch(GIST_API, {
-    headers: ghHeaders(lastEtag?{'If-None-Match':lastEtag}:{})
-  });
-  if(res.status === 304) return null; // not modified
-  if(!res.ok) throw new Error(`GitHub API ${res.status}`);
+  const res = await fetch(GIST_API, { headers: ghToken ? { ...ghH(), ...(lastEtag?{'If-None-Match':lastEtag}:{}) } : {} });
+  if(res.status===304) return null;
+  if(!res.ok) throw new Error(`GitHub ${res.status}`);
   lastEtag = res.headers.get('ETag')||'';
   const data = await res.json();
-  const content = data.files[GIST_FILE]?.content || '{"entries":[]}';
-  return JSON.parse(content).entries || [];
+  const raw  = JSON.parse(data.files[GIST_FILE]?.content || '{}');
+  return { entries: raw.entries||[], health: raw.health||[] };
 }
 
-async function saveGist(ents){
+async function saveGist(){
   const res = await fetch(GIST_API, {
-    method:'PATCH',
-    headers: ghHeaders(),
-    body: JSON.stringify({ files:{ [GIST_FILE]:{ content:JSON.stringify({entries:ents}) } } })
+    method:'PATCH', headers:ghH(),
+    body: JSON.stringify({ files:{ [GIST_FILE]:{ content:JSON.stringify({entries,health}) } } })
   });
-  if(!res.ok) throw new Error(`GitHub API ${res.status}`);
-  lastEtag = '';
+  if(!res.ok) throw new Error(`GitHub ${res.status}`);
+  lastEtag='';
 }
 
-// ── Init ─────────────────────────────────────
+// ── Init ──────────────────────────────────
 function init(){
   document.getElementById('eDate').value = today();
 
-  const sl = document.getElementById('eSlider');
-  sl.addEventListener('input',()=>{ document.getElementById('eSliderVal').textContent=fmtH(sl.value) });
-
-  const grid = document.getElementById('moodGrid');
+  // mood grid
+  const g = document.getElementById('moodGrid');
   for(let i=1;i<=10;i++){
     const b=document.createElement('button');
-    b.className='mb';b.textContent=i;b.dataset.v=i;
+    b.className='mb';b.textContent=i;
     b.addEventListener('click',()=>pickMood(i));
-    b.id=`mb${i}`;grid.appendChild(b);
+    b.id=`mb${i}`;g.appendChild(b);
   }
 
+  // stepper buttons
+  document.querySelectorAll('.num-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const inp  = document.getElementById(btn.dataset.target);
+      const step = parseFloat(btn.dataset.step);
+      const dir  = parseFloat(btn.dataset.dir);
+      const cur  = parseFloat(inp.value)||0;
+      const next = Math.round((cur + step*dir)*10)/10;
+      const mn   = parseFloat(inp.min)||0;
+      const mx   = parseFloat(inp.max)||9999;
+      if(next>=mn && next<=mx) inp.value = next;
+    });
+  });
+
+  // month nav
   updateMDisp();
   document.getElementById('mPrev').onclick=()=>{ shiftMonth(-1);renderMonth() };
   document.getElementById('mNext').onclick=()=>{ shiftMonth(1);renderMonth() };
+
+  // tab nav
   document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>goTab(b.dataset.tab,b)));
-  document.getElementById('saveBtn').onclick=saveEntry;
-  document.getElementById('connectBtn').onclick=connectGist;
-  document.getElementById('clearBtn').onclick=clearCache;
+
+  // action buttons
+  document.getElementById('saveBtn').onclick      = saveSleep;
+  document.getElementById('saveHealthBtn').onclick = saveHealth;
+  document.getElementById('connectBtn').onclick    = connectGist;
+  document.getElementById('clearBtn').onclick      = clearCache;
 
   // restore token
-  if(ghToken){
-    document.getElementById('sToken').value=ghToken;
-    startSync();
-  }
+  if(ghToken){ document.getElementById('sToken').value=ghToken; startSync(); }
 
   // local cache
-  const cached=ls('sleepTracker_cache');
-  if(cached){ entries=JSON.parse(cached);refresh() }
+  const c=ls('sleepTracker_cache');
+  if(c){ const d=JSON.parse(c); entries=d.entries||[]; health=d.health||[]; refresh() }
 }
 
-// ── Tab nav ───────────────────────────────────
+// ── Tab nav ───────────────────────────────
 function goTab(tab,btn){
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   document.getElementById(`pan-${tab}`).classList.add('on');
   btn.classList.add('on');
-  if(tab==='dash') renderDash();
-  if(tab==='month') renderMonth();
+  if(tab==='dash')     renderDash();
+  if(tab==='month')    renderMonth();
   if(tab==='analysis') renderAnalysis();
 }
 
-// ── Sync ──────────────────────────────────────
+// ── Sync ──────────────────────────────────
 async function connectGist(){
-  const tok = document.getElementById('sToken').value.trim();
-  if(!tok){ toast('토큰을 입력하세요'); return; }
+  const tok=document.getElementById('sToken').value.trim();
+  if(!tok){toast('토큰을 입력하세요');return;}
   ghToken=tok; lsSet('sleepTracker_token',tok);
   toast('🔗 연결 중...');
   startSync();
@@ -312,232 +417,294 @@ async function startSync(){
   if(pollTimer) clearInterval(pollTimer);
   setSync('sync','🟡 GitHub Gist 연결 중...');
   try{
-    const ents = await loadGist();
-    if(ents!==null){
-      entries=ents;
-      lsSet('sleepTracker_cache',JSON.stringify(entries));
-      refresh();
-    }
-    setSync('ok','🟢 GitHub Gist 동기화 완료');
+    const d=await loadGist();
+    if(d){ entries=d.entries; health=d.health; saveCache(); refresh(); }
+    setSync('ok','🟢 동기화 완료');
     showSyncDetail();
-    pollTimer = setInterval(pollGist, POLL_MS);
-  } catch(e){
-    setSync('err','🔴 연결 실패 — 토큰을 확인하세요');
-    toast('❌ ' + e.message);
-  }
+    pollTimer=setInterval(pollGist,POLL_MS);
+  }catch(e){ setSync('err','🔴 연결 실패 — 토큰 확인');toast('❌ '+e.message); }
 }
 
 async function pollGist(){
-  if(!ghToken) return;
   try{
-    const ents = await loadGist();
-    if(ents===null) return; // 304 not modified
-    entries=ents;
-    lsSet('sleepTracker_cache',JSON.stringify(entries));
-    setSync('ok',`🟢 동기화됨 — ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);
-    refresh();
-  } catch(e){
-    setSync('err','🔴 동기화 오류');
-  }
+    const d=await loadGist();
+    if(!d) return;
+    entries=d.entries; health=d.health; saveCache(); refresh();
+    setSync('ok',`🟢 동기화됨 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);
+  }catch(e){ setSync('err','🔴 동기화 오류'); }
 }
+
+function saveCache(){ lsSet('sleepTracker_cache',JSON.stringify({entries,health})); }
 
 function showSyncDetail(){
   const card=document.getElementById('syncStatusCard');
   const det=document.getElementById('syncDetail');
   card.style.display='block';
-  det.innerHTML=`Gist ID: <code style="color:var(--gold);font-size:11px">${GIST_ID}</code><br>
-    총 기록: <strong style="color:var(--gold)">${entries.length}일</strong><br>
-    30초마다 자동 갱신`;
+  det.innerHTML=`수면기록: <span class="hval">${entries.length}일</span> &nbsp; 건강기록: <span class="hval">${health.length}일</span><br>30초마다 자동 갱신`;
 }
 
-// ── Mood picker ───────────────────────────────
+function clearCache(){
+  if(!confirm('로컬 캐시를 초기화합니까?')) return;
+  localStorage.removeItem('sleepTracker_cache');
+  entries=[]; health=[]; refresh(); toast('🗑️ 캐시 초기화됨');
+}
+
+// ── Mood ──────────────────────────────────
 function pickMood(v){
   selMood=v;
   for(let i=1;i<=10;i++) document.getElementById(`mb${i}`).classList.toggle('on',i===v);
 }
 
-// ── Month nav ─────────────────────────────────
-function shiftMonth(d){ curMonth=new Date(curMonth.getFullYear(),curMonth.getMonth()+d,1);updateMDisp() }
-function updateMDisp(){ document.getElementById('mDisp').textContent=`${curMonth.getFullYear()}년 ${curMonth.getMonth()+1}월` }
+// ── Month ─────────────────────────────────
+function shiftMonth(d){ curMonth=new Date(curMonth.getFullYear(),curMonth.getMonth()+d,1); updateMDisp(); }
+function updateMDisp(){ document.getElementById('mDisp').textContent=`${curMonth.getFullYear()}년 ${curMonth.getMonth()+1}월`; }
 
-// ── Save entry ────────────────────────────────
-async function saveEntry(){
-  const date      = document.getElementById('eDate').value;
-  const sleepHours= parseFloat(document.getElementById('eSlider').value);
-  const wRaw      = document.getElementById('eWatch').value;
-  const watchScore= wRaw!==''?parseInt(wRaw):null;
-  const moodScore = selMood;
-  const memo      = document.getElementById('eMemo').value.trim();
+// ── Save sleep ────────────────────────────
+async function saveSleep(){
+  const date       = document.getElementById('eDate').value;
+  const sleepHours = parseFloat(document.getElementById('eSleep').value);
+  const wRaw       = document.getElementById('eWatch').value;
+  const watchScore = wRaw!==''?parseInt(wRaw):null;
+  const moodScore  = selMood;
+  const memo       = document.getElementById('eMemo').value.trim();
 
-  if(!date)      { toast('날짜를 선택하세요'); return; }
-  if(!moodScore) { toast('기분 점수를 선택하세요 (1–10)'); return; }
+  if(!date)       { toast('날짜를 선택하세요'); return; }
+  if(isNaN(sleepHours)||sleepHours<=0){ toast('수면 시간을 입력하세요'); return; }
+  if(!moodScore)  { toast('기분 점수를 선택하세요 (1–10)'); return; }
 
-  const rec = { date, sleepHours, watchScore, moodScore, memo, ts:Date.now() };
-  const idx = entries.findIndex(e=>e.date===date);
-  if(idx>=0) entries[idx]={...entries[idx],...rec};
-  else entries.unshift(rec);
-  entries.sort((a,b)=>b.date.localeCompare(a.date));
-
-  lsSet('sleepTracker_cache',JSON.stringify(entries));
-  refresh();
+  const rec={date,sleepHours,watchScore,moodScore,memo,ts:Date.now()};
+  upsert(entries,rec,'date');
+  saveCache(); refresh();
 
   if(ghToken){
     setSync('sync','🟡 저장 중...');
-    try{
-      await saveGist(entries);
-      lastEtag='';
-      setSync('ok','🟢 동기화됨');
-      toast('✅ 저장 및 동기화 완료');
-    } catch(e){
-      setSync('err','🔴 저장 실패');
-      toast('⚠️ 로컬 저장됨 (동기화 실패)');
-    }
-  } else {
-    toast('✅ 로컬 저장됨');
-  }
+    try{ await saveGist(); lastEtag=''; setSync('ok','🟢 동기화됨'); toast('✅ 수면 기록 저장됨'); }
+    catch(e){ setSync('err','🔴 저장 실패'); toast('⚠️ 로컬 저장됨'); }
+  } else { toast('✅ 로컬 저장됨'); }
 
-  resetForm();
-  document.getElementById('todayCard').innerHTML=`
-    <div class="card" style="border-color:var(--green)">
-      <div class="ctitle" style="color:var(--green)">✅ 기록 완료</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.8">
-        수면: <strong style="color:var(--gold)">${fmtH(sleepHours)}</strong>&nbsp;
-        ${watchScore!==null?`워치: <strong style="color:var(--gold)">${watchScore}점</strong>&nbsp;`:''}
-        기분: <strong style="color:${moodColor(moodScore)}">${moodScore}/10</strong>
-        ${memo?`<br><span style="color:var(--muted)">${memo}</span>`:''}
-      </p>
-    </div>`;
-}
-
-function resetForm(){
+  // reset sleep form
   selMood=0;
   for(let i=1;i<=10;i++) document.getElementById(`mb${i}`).classList.remove('on');
   document.getElementById('eWatch').value='';
   document.getElementById('eMemo').value='';
   document.getElementById('eDate').value=today();
-  document.getElementById('eSlider').value=7;
-  document.getElementById('eSliderVal').textContent='7.0h';
+  document.getElementById('eSleep').value='7.0';
+
+  showTodayCard(rec,null);
 }
 
-// ── Delete ────────────────────────────────────
-async function deleteEntry(id){
-  if(!confirm('이 기록을 삭제하시겠습니까?')) return;
-  entries=entries.filter(e=>e.ts!==parseInt(id));
-  lsSet('sleepTracker_cache',JSON.stringify(entries));
-  refresh();
+// ── Save health ───────────────────────────
+async function saveHealth(){
+  const date    = document.getElementById('eDate').value;
+  const wRaw    = document.getElementById('eWeight').value;
+  const gRaw    = document.getElementById('eGlucose').value;
+  const weight  = wRaw!==''?parseFloat(wRaw):null;
+  const glucose = gRaw!==''?parseInt(gRaw):null;
+
+  if(!date){ toast('날짜를 선택하세요'); return; }
+  if(weight===null && glucose===null){ toast('몸무게 또는 공복혈당을 입력하세요'); return; }
+
+  const rec={date,weight,glucose,ts:Date.now()};
+  upsert(health,rec,'date');
+  saveCache(); refresh();
+
   if(ghToken){
-    try{ await saveGist(entries);lastEtag=''; } catch(e){}
-  }
+    setSync('sync','🟡 저장 중...');
+    try{ await saveGist(); lastEtag=''; setSync('ok','🟢 동기화됨'); toast('✅ 건강 기록 저장됨'); }
+    catch(e){ setSync('err','🔴 저장 실패'); toast('⚠️ 로컬 저장됨'); }
+  } else { toast('✅ 로컬 저장됨'); }
+
+  document.getElementById('eWeight').value='';
+  document.getElementById('eGlucose').value='';
+
+  // find matching sleep record for today card
+  const sleepRec=entries.find(e=>e.date===date)||null;
+  showTodayCard(sleepRec,rec);
+}
+
+function upsert(arr,rec,key){
+  const idx=arr.findIndex(e=>e[key]===rec[key]);
+  if(idx>=0) arr[idx]={...arr[idx],...rec};
+  else arr.unshift(rec);
+  arr.sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function showTodayCard(sleep,hlth){
+  const s=sleep, h=hlth;
+  document.getElementById('todayCard').innerHTML=`
+    <div class="card" style="border-color:var(--green)">
+      <div class="ctitle" style="color:var(--green)">✅ 기록 완료</div>
+      <p style="font-size:13px;color:var(--text);line-height:1.9">
+        ${s?`수면: <span class="hval">${fmtH(s.sleepHours)}h</span> &nbsp; 기분: <span style="color:${moodColor(s.moodScore)}">${s.moodScore}/10</span>${s.watchScore!=null?` &nbsp; 워치: <span class="hval">${s.watchScore}점</span>`:''}`:'' }
+        ${s&&h?'<br>':''}
+        ${h?`${h.weight!=null?`몸무게: <span class="hval">${h.weight}kg</span> &nbsp;`:''}${h.glucose!=null?`공복혈당: <span class="hval">${h.glucose}mg/dL</span> ${glucoseBadge(h.glucose)}`:''}` : ''}
+      </p>
+    </div>`;
+}
+
+// ── Delete ────────────────────────────────
+async function delEntry(ts,type){
+  if(!confirm('삭제하시겠습니까?')) return;
+  if(type==='sleep') entries=entries.filter(e=>e.ts!==parseInt(ts));
+  else health=health.filter(e=>e.ts!==parseInt(ts));
+  saveCache(); refresh();
+  if(ghToken){ try{await saveGist();lastEtag='';}catch(e){} }
   toast('🗑️ 삭제됨');
 }
-window.deleteEntry=deleteEntry;
+window.delEntry=delEntry;
 
-// ── Clear cache ───────────────────────────────
-function clearCache(){
-  if(!confirm('로컬 캐시를 초기화합니까?\n(GitHub Gist 데이터는 유지됩니다)')) return;
-  localStorage.removeItem('sleepTracker_cache');
-  entries=[];refresh();toast('🗑️ 캐시 초기화됨');
-}
-
-// ── Refresh ───────────────────────────────────
+// ── Refresh ───────────────────────────────
 function refresh(){
-  const active=document.querySelector('.pan.on');
-  if(!active) return;
-  const tab=active.id.replace('pan-','');
-  if(tab==='dash') renderDash();
-  if(tab==='month') renderMonth();
+  const a=document.querySelector('.pan.on');
+  if(!a) return;
+  const tab=a.id.replace('pan-','');
+  if(tab==='dash')     renderDash();
+  if(tab==='month')    renderMonth();
   if(tab==='analysis') renderAnalysis();
   if(tab==='settings') showSyncDetail();
 }
 
-// ── Dashboard ─────────────────────────────────
+// ── Dashboard ─────────────────────────────
 function renderDash(){
   const el=document.getElementById('dashCont');
-  if(!entries.length){
-    el.innerHTML='<div class="empty"><div class="ei">📊</div><p>기록을 시작하면<br>대시보드가 표시됩니다</p></div>';return;
-  }
+  const hasAny=entries.length||health.length;
+  if(!hasAny){ el.innerHTML='<div class="empty"><div class="ei">📊</div><p>기록을 시작하면<br>대시보드가 표시됩니다</p></div>'; return; }
+
   const now=new Date();
   const ym=`${now.getFullYear()}-${pad(now.getMonth()+1)}`;
-  const mData=entries.filter(e=>e.date.startsWith(ym));
-  const pool=mData.length?mData:entries.slice(0,30);
-  const recent=[...entries].sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
 
-  const as=avg(pool.map(e=>e.sleepHours));
-  const aw=avg(pool.filter(e=>e.watchScore!=null).map(e=>e.watchScore));
-  const am=avg(pool.map(e=>e.moodScore));
+  // sleep stats
+  const mE=entries.filter(e=>e.date.startsWith(ym));
+  const poolE=mE.length?mE:entries.slice(0,30);
+  const as=avg(poolE.map(e=>e.sleepHours));
+  const aw=avg(poolE.filter(e=>e.watchScore!=null).map(e=>e.watchScore));
+  const am=avg(poolE.map(e=>e.moodScore));
+
+  // health stats
+  const mH=health.filter(e=>e.date.startsWith(ym));
+  const poolH=mH.length?mH:health.slice(0,30);
+  const aW=avg(poolH.filter(e=>e.weight!=null).map(e=>e.weight));
+  const aG=avg(poolH.filter(e=>e.glucose!=null).map(e=>e.glucose));
+
+  const glucoseColor = aG>0 ? (aG<100?'var(--green)':aG<126?'var(--orange)':'var(--red)') : 'var(--gold)';
+
+  const recent30E=[...entries].sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
+  const recent30H=[...health].sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
 
   el.innerHTML=`
+    <p style="font-size:10px;color:var(--muted);text-align:right;margin-bottom:6px">${now.getMonth()+1}월 평균</p>
+
+    <!-- 수면 통계 -->
     <div class="sgrid">
-      <div class="scard"><div class="sv">${as.toFixed(1)}<span class="su">h</span></div><div class="sl2">월평균 수면</div></div>
-      <div class="scard"><div class="sv">${aw>0?Math.round(aw):'—'}</div><div class="sl2">월평균 워치점수</div></div>
-      <div class="scard"><div class="sv" style="color:${moodColor(am)}">${am.toFixed(1)}</div><div class="sl2">월평균 기분</div></div>
-      <div class="scard"><div class="sv">${entries.length}</div><div class="sl2">총 기록일수</div></div>
+      <div class="scard"><div class="sv">${as>0?as.toFixed(1):'—'}<span class="su">h</span></div><div class="sl2">평균 수면</div></div>
+      <div class="scard"><div class="sv">${aw>0?Math.round(aw):'—'}</div><div class="sl2">평균 워치점수</div></div>
+      <div class="scard"><div class="sv" style="color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균 기분</div></div>
+      <div class="scard"><div class="sv">${entries.length}</div><div class="sl2">수면 기록일</div></div>
     </div>
-    <div class="card"><div class="ctitle">📈 최근 수면 시간</div><div class="ch"><canvas id="chSleep"></canvas></div></div>
-    <div class="card"><div class="ctitle">😊 기분 점수 추이</div><div class="ch"><canvas id="chMood"></canvas></div></div>
-    ${aw>0?`<div class="card"><div class="ctitle">⌚ 워치 수면점수 추이</div><div class="ch"><canvas id="chWatch"></canvas></div></div>`:''}
+
+    <!-- 건강 통계 -->
+    <div class="sgrid3" style="margin-bottom:12px">
+      <div class="scard"><div class="sv">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균 몸무게</div></div>
+      <div class="scard"><div class="sv" style="color:${glucoseColor}">${aG>0?Math.round(aG):'—'}<span class="su">mg</span></div><div class="sl2">평균 공복혈당</div></div>
+      <div class="scard"><div class="sv">${health.length}</div><div class="sl2">건강 기록일</div></div>
+    </div>
+
+    ${recent30E.length?`<div class="card"><div class="ctitle">📈 수면 시간 (최근 30일)</div><div class="ch"><canvas id="chSleep"></canvas></div></div>`:''}
+    ${recent30E.length?`<div class="card"><div class="ctitle">😊 기분 점수 추이</div><div class="ch"><canvas id="chMood"></canvas></div></div>`:''}
+    ${recent30H.filter(e=>e.weight!=null).length>=2?`<div class="card"><div class="ctitle">⚖️ 몸무게 추이</div><div class="ch"><canvas id="chWeight"></canvas></div></div>`:''}
+    ${recent30H.filter(e=>e.glucose!=null).length>=2?`<div class="card"><div class="ctitle">🩸 공복혈당 추이</div><div class="ch"><canvas id="chGlucose"></canvas></div></div>`:''}
   `;
 
-  const labels=recent.map(e=>e.date.slice(5));
-  const copts=(mx,mn=0)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8ba3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,.04)'}},y:{min:mn,max:mx,ticks:{color:'#8ba3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}});
+  const gx=(yMax,yMin)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8ba3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,.04)'}},y:{min:yMin,max:yMax,ticks:{color:'#8ba3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}});
 
-  mkChart('sleep',document.getElementById('chSleep'),{type:'bar',data:{labels,datasets:[{data:recent.map(e=>e.sleepHours),backgroundColor:recent.map(e=>e.sleepHours>=7?'rgba(201,169,110,.75)':'rgba(239,83,80,.5)'),borderRadius:4}]},options:copts(12)});
-  mkChart('mood',document.getElementById('chMood'),{type:'line',data:{labels,datasets:[{data:recent.map(e=>e.moodScore),borderColor:'rgba(201,169,110,.9)',backgroundColor:'rgba(201,169,110,.08)',borderWidth:2,pointBackgroundColor:recent.map(e=>moodColor(e.moodScore)),pointRadius:3,tension:.35,fill:true}]},options:copts(10)});
+  if(document.getElementById('chSleep'))
+    mkChart('sleep',document.getElementById('chSleep'),{type:'bar',data:{labels:recent30E.map(e=>e.date.slice(5)),datasets:[{data:recent30E.map(e=>e.sleepHours),backgroundColor:recent30E.map(e=>e.sleepHours>=7?'rgba(201,169,110,.75)':'rgba(239,83,80,.5)'),borderRadius:4}]},options:gx(12,0)});
 
-  const wD=recent.filter(e=>e.watchScore!=null);
-  if(wD.length&&document.getElementById('chWatch')){
-    mkChart('watch',document.getElementById('chWatch'),{type:'line',data:{labels:wD.map(e=>e.date.slice(5)),datasets:[{data:wD.map(e=>e.watchScore),borderColor:'rgba(79,195,247,.85)',backgroundColor:'rgba(79,195,247,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},options:copts(100)});
+  if(document.getElementById('chMood'))
+    mkChart('mood',document.getElementById('chMood'),{type:'line',data:{labels:recent30E.map(e=>e.date.slice(5)),datasets:[{data:recent30E.map(e=>e.moodScore),borderColor:'rgba(201,169,110,.9)',backgroundColor:'rgba(201,169,110,.08)',borderWidth:2,pointBackgroundColor:recent30E.map(e=>moodColor(e.moodScore)),pointRadius:3,tension:.35,fill:true}]},options:gx(10,0)});
+
+  const wData=recent30H.filter(e=>e.weight!=null);
+  if(wData.length>=2&&document.getElementById('chWeight')){
+    const wVals=wData.map(e=>e.weight);
+    const wMin=Math.floor(Math.min(...wVals)-1), wMax=Math.ceil(Math.max(...wVals)+1);
+    mkChart('weight',document.getElementById('chWeight'),{type:'line',data:{labels:wData.map(e=>e.date.slice(5)),datasets:[{data:wVals,borderColor:'rgba(102,187,106,.85)',backgroundColor:'rgba(102,187,106,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},options:gx(wMax,wMin)});
+  }
+
+  const gData=recent30H.filter(e=>e.glucose!=null);
+  if(gData.length>=2&&document.getElementById('chGlucose')){
+    const gVals=gData.map(e=>e.glucose);
+    const gMin=Math.floor(Math.min(...gVals)-5), gMax=Math.ceil(Math.max(...gVals)+5);
+    mkChart('glucose',document.getElementById('chGlucose'),{type:'line',data:{labels:gData.map(e=>e.date.slice(5)),datasets:[{data:gVals,borderColor:'rgba(239,83,80,.85)',backgroundColor:'rgba(239,83,80,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true,
+      segment:{borderColor:ctx=>ctx.p1.parsed.y>=126?'rgba(239,83,80,.9)':ctx.p1.parsed.y>=100?'rgba(255,167,38,.9)':'rgba(102,187,106,.9)'}
+    }]},options:{...gx(gMax,gMin),plugins:{legend:{display:false},annotation:{annotations:{normal:{type:'line',yMin:100,yMax:100,borderColor:'rgba(102,187,106,.4)',borderWidth:1,borderDash:[4,4]},pre:{type:'line',yMin:126,yMax:126,borderColor:'rgba(239,83,80,.4)',borderWidth:1,borderDash:[4,4]}}}}}});
   }
 }
 
-// ── Monthly ───────────────────────────────────
+// ── Monthly ───────────────────────────────
 function renderMonth(){
   const el=document.getElementById('monthCont');
   const ym=`${curMonth.getFullYear()}-${pad(curMonth.getMonth()+1)}`;
-  const data=entries.filter(e=>e.date.startsWith(ym)).sort((a,b)=>b.date.localeCompare(a.date));
-  if(!data.length){el.innerHTML=`<div class="empty"><div class="ei">📅</div><p>${curMonth.getMonth()+1}월 기록이 없습니다</p></div>`;return;}
+  const mE=entries.filter(e=>e.date.startsWith(ym)).sort((a,b)=>b.date.localeCompare(a.date));
+  const mH=health.filter(e=>e.date.startsWith(ym)).sort((a,b)=>b.date.localeCompare(a.date));
 
-  const as=avg(data.map(e=>e.sleepHours));
-  const aw=avg(data.filter(e=>e.watchScore!=null).map(e=>e.watchScore));
-  const am=avg(data.map(e=>e.moodScore));
+  if(!mE.length&&!mH.length){ el.innerHTML=`<div class="empty"><div class="ei">📅</div><p>${curMonth.getMonth()+1}월 기록이 없습니다</p></div>`; return; }
+
+  const as=avg(mE.map(e=>e.sleepHours));
+  const am=avg(mE.map(e=>e.moodScore));
+  const aW=avg(mH.filter(e=>e.weight!=null).map(e=>e.weight));
+  const aG=avg(mH.filter(e=>e.glucose!=null).map(e=>e.glucose));
+
+  // merge by date
+  const allDates=[...new Set([...mE.map(e=>e.date),...mH.map(e=>e.date)])].sort((a,b)=>b.localeCompare(a));
 
   el.innerHTML=`
-    <div class="sgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
-      <div class="scard"><div class="sv" style="font-size:20px">${as.toFixed(1)}h</div><div class="sl2">평균 수면</div></div>
-      <div class="scard"><div class="sv" style="font-size:20px">${aw>0?Math.round(aw):'—'}</div><div class="sl2">평균 워치</div></div>
-      <div class="scard"><div class="sv" style="font-size:20px;color:${moodColor(am)}">${am.toFixed(1)}</div><div class="sl2">평균 기분</div></div>
+    <div class="sgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+      <div class="scard"><div class="sv" style="font-size:18px">${as>0?as.toFixed(1)+'h':'—'}</div><div class="sl2">평균수면</div></div>
+      <div class="scard"><div class="sv" style="font-size:18px;color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균기분</div></div>
+      <div class="scard"><div class="sv" style="font-size:18px">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균몸무게</div></div>
+      <div class="scard"><div class="sv" style="font-size:18px;color:${aG>0?(aG<100?'var(--green)':aG<126?'var(--orange)':'var(--red)'):'var(--gold)'}">${aG>0?Math.round(aG):'—'}</div><div class="sl2">평균혈당</div></div>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
-      <table class="tbl">
-        <thead><tr><th>날짜</th><th>수면</th><th>워치</th><th>기분</th><th>메모</th><th></th></tr></thead>
-        <tbody>${data.map(e=>`<tr>
-          <td>${e.date.slice(5)}</td>
-          <td>${fmtH(e.sleepHours)}</td>
-          <td>${e.watchScore??'—'}</td>
-          <td><span class="bdg ${moodBadge(e.moodScore)}">${e.moodScore}</span></td>
-          <td style="font-size:11px;color:var(--muted);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.memo||''}</td>
-          <td><button class="dbtn" onclick="deleteEntry('${e.ts}')">✕</button></td>
-        </tr>`).join('')}</tbody>
+      <div style="overflow-x:auto">
+      <table class="tbl" style="min-width:360px">
+        <thead><tr><th>날짜</th><th>수면</th><th>기분</th><th>몸무게</th><th>공복혈당</th><th>워치</th><th></th></tr></thead>
+        <tbody>
+          ${allDates.map(date=>{
+            const e=mE.find(x=>x.date===date);
+            const h=mH.find(x=>x.date===date);
+            const ts=(e||h).ts;
+            return `<tr>
+              <td style="color:var(--muted);font-size:11px">${date.slice(5)}</td>
+              <td>${e?fmtH(e.sleepHours)+'h':'—'}</td>
+              <td>${e?`<span class="bdg ${moodBadge(e.moodScore)}">${e.moodScore}</span>`:'—'}</td>
+              <td>${h&&h.weight!=null?h.weight+'kg':'—'}</td>
+              <td>${h&&h.glucose!=null?h.glucose+' '+glucoseBadge(h.glucose):'—'}</td>
+              <td>${e&&e.watchScore!=null?e.watchScore:'—'}</td>
+              <td>
+                ${e?`<button class="dbtn" onclick="delEntry('${e.ts}','sleep')">✕</button>`:''}
+                ${h?`<button class="dbtn" onclick="delEntry('${h.ts}','health')">✕</button>`:''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
       </table>
+      </div>
     </div>`;
 }
 
-// ── Analysis ──────────────────────────────────
+// ── Analysis ──────────────────────────────
 function renderAnalysis(){
   const el=document.getElementById('analysisCont');
-  if(entries.length<7){
-    el.innerHTML=`<div class="empty"><div class="ei">🎯</div><p>최소 <strong style="color:var(--gold)">7일</strong> 이상 기록하면<br>최적 수면 분석이 시작됩니다<br><br>현재: <strong style="color:var(--gold)">${entries.length}일</strong> 기록됨</p></div>`;return;
-  }
+  if(entries.length<7){ el.innerHTML=`<div class="empty"><div class="ei">🎯</div><p>최소 <strong style="color:var(--gold)">7일</strong> 이상 기록하면<br>분석이 시작됩니다<br><br>현재: <strong style="color:var(--gold)">${entries.length}일</strong> 기록됨</p></div>`; return; }
 
   const groups={};
   entries.forEach(e=>{
     const k=Math.round(parseFloat(e.sleepHours)*2)/2;
-    if(!groups[k]){groups[k]={moods:[],watch:[]}}
+    if(!groups[k]) groups[k]={moods:[],watch:[]};
     groups[k].moods.push(e.moodScore);
     if(e.watchScore!=null) groups[k].watch.push(e.watchScore);
   });
-
-  const buckets=Object.entries(groups).map(([h,g])=>({h:parseFloat(h),avgMood:avg(g.moods),avgWatch:avg(g.watch),cnt:g.moods.length})).sort((a,b)=>a.h-b.h);
+  const buckets=Object.entries(groups).map(([h,g])=>({h:parseFloat(h),avgMood:avg(g.moods),cnt:g.moods.length})).sort((a,b)=>a.h-b.h);
   const qual=buckets.filter(b=>b.cnt>=2);
   const pool2=qual.length>=2?qual:buckets;
   const optimal=pool2.reduce((best,b)=>b.avgMood>best.avgMood?b:best);
@@ -549,15 +716,14 @@ function renderAnalysis(){
 
   el.innerHTML=`
     <div class="optcard">
-      <div style="font-size:11px;color:var(--gold);letter-spacing:1.5px;margin-bottom:10px">나의 최적 수면 시간</div>
+      <div style="font-size:10px;color:var(--gold);letter-spacing:1.5px;margin-bottom:8px">나의 최적 수면 시간</div>
       <div class="opth">${optimal.h}시간</div>
-      <div class="optl">이 때 기분 점수가 가장 높습니다 (평균 ${optimal.avgMood.toFixed(1)}점 / 10점)</div>
-      <div class="optd">총 <strong style="color:var(--gold)">${entries.length}일</strong>의 데이터를 분석한 결과입니다.<br>
-      <strong style="color:var(--gold)">${optimal.h}시간</strong>이 당신만의 숫자입니다.</div>
+      <div class="optl">평균 기분 ${optimal.avgMood.toFixed(1)}점 / 10점</div>
+      <div class="optd">총 <strong style="color:var(--gold)">${entries.length}일</strong> 데이터 분석 결과<br><strong style="color:var(--gold)">${optimal.h}시간</strong>이 당신만의 숫자입니다</div>
     </div>
-    <div class="card"><div class="ctitle">📊 수면시간별 평균 기분 점수</div><div class="ch"><canvas id="chOpt"></canvas></div></div>
+    <div class="card"><div class="ctitle">📊 수면시간별 기분 점수</div><div class="ch"><canvas id="chOpt"></canvas></div></div>
     <div class="card">
-      <div class="ctitle">📋 구간별 상세 분석</div>
+      <div class="ctitle">📋 구간별 분석</div>
       ${buckets.map(b=>`<div class="brow">
         <span class="blbl">${b.h}h</span>
         <div class="bout"><div class="bin" style="width:${(b.avgMood/10)*100}%;${b.h===optimal.h?'background:var(--gold)':''}"></div></div>
@@ -565,22 +731,20 @@ function renderAnalysis(){
         <span class="bcnt">(${b.cnt}일)</span>
       </div>`).join('')}
     </div>
-    ${hasWatch.length>=4?`<div class="card">
-      <div class="ctitle">⌚ 애플워치 수면점수 분석</div>
+    ${hasWatch.length>=4?`<div class="card"><div class="ctitle">⌚ 워치 수면점수 분석</div>
       <p style="font-size:13px;line-height:1.9;color:var(--text)">
-        전체 평균 워치점수: <strong style="color:var(--gold)">${Math.round(avgWA)}점</strong><br>
-        ${hiW.length>=2?`워치 80점↑ 날의 기분: <strong style="color:var(--green)">${avg(hiW.map(e=>e.moodScore)).toFixed(1)}점</strong><br>`:''}
-        ${loW.length>=2?`워치 70점↓ 날의 기분: <strong style="color:var(--red)">${avg(loW.map(e=>e.moodScore)).toFixed(1)}점</strong>`:''}
-      </p>
-    </div>`:''}
-    <div class="card" style="background:linear-gradient(135deg,rgba(201,169,110,.07),rgba(201,169,110,.02))">
-      <div class="ctitle">💬 김경일 교수의 처방</div>
+        전체 평균: <span class="hval">${Math.round(avgWA)}점</span><br>
+        ${hiW.length>=2?`80점↑ 날의 기분: <span style="color:var(--green);font-weight:700">${avg(hiW.map(e=>e.moodScore)).toFixed(1)}점</span><br>`:''}
+        ${loW.length>=2?`70점↓ 날의 기분: <span style="color:var(--red);font-weight:700">${avg(loW.map(e=>e.moodScore)).toFixed(1)}점</span>`:''}
+      </p></div>`:''}
+    <div class="card" style="background:linear-gradient(135deg,rgba(201,169,110,.06),rgba(201,169,110,.02))">
+      <div class="ctitle">💬 김경일 교수</div>
       <div class="qb">"나에게 최적화된 수면 시간을 찾는 것이 인생을 바꾸는 첫걸음이다."</div>
-      <p style="font-size:13px;color:var(--muted);line-height:1.7">
-        현재 <strong style="color:var(--gold)">${entries.length}일</strong> 기록됨
-        ${entries.length>=30?'<br><span style="color:var(--green)">✓ 30일 달성! 기초 분석 완료</span>':''}
-        ${entries.length>=100?'<br><span style="color:var(--green)">✓ 100일 달성! 신뢰할 수 있는 데이터</span>':''}
-        ${entries.length>=365?'<br><span style="color:var(--gold)">🏆 365일 달성!</span>':''}
+      <p style="font-size:12px;color:var(--muted);line-height:1.7">
+        ${entries.length}일 기록됨
+        ${entries.length>=30?'&nbsp;<span style="color:var(--green)">✓ 30일 달성</span>':''}
+        ${entries.length>=100?'&nbsp;<span style="color:var(--green)">✓ 100일 달성</span>':''}
+        ${entries.length>=365?'&nbsp;<span style="color:var(--gold)">🏆 365일!</span>':''}
       </p>
     </div>`;
 
