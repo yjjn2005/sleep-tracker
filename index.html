@@ -8,10 +8,10 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d1b2a;--card:#1a2d40;--card2:#243d55;
-  --gold:#c9a96e;--gold-l:#e8c98a;--text:#e8edf5;--muted:#8ba3b8;
-  --green:#66bb6a;--orange:#ffa726;--red:#ef5350;--blue:#4fc3f7;
-  --border:rgba(201,169,110,0.2);--r:12px;
+--bg:#0d1b2a;--card:#1a2d40;--card2:#243d55;
+--gold:#c9a96e;--gold-l:#e8c98a;--text:#e8edf5;--muted:#8ba3b8;
+--green:#66bb6a;--orange:#ffa726;--red:#ef5350;--blue:#4fc3f7;
+--border:rgba(201,169,110,0.2);--r:12px;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:72px;-webkit-tap-highlight-color:transparent}
 
@@ -21,7 +21,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hdr p{font-size:11px;color:var(--muted);margin-top:2px}
 
 /* Sync bar */
-#syncBar{text-align:center;font-size:11px;padding:5px 16px;transition:all .3s}
+#syncBar{text-align:center;font-size:11px;padding:5px 16px;transition:all .3s;cursor:pointer}
 .s-ok{color:var(--green)}.s-sync{color:var(--orange)}.s-err{color:var(--red)}.s-off{color:var(--muted)}
 
 /* Bottom nav */
@@ -59,8 +59,9 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
 
 /* Buttons */
 .btn{width:100%;padding:14px;border:none;border-radius:var(--r);font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
-.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#0d1b2a}.btn-red{background:#ef5350;color:#fff}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-l));color:#0d1b2a}.btn-red{background:#ef5350;color:#fff}.btn-blue{background:#4fc3f7;color:#0d1b2a}
 .btn:hover{opacity:.9}.btn:active{opacity:.8}
+.btn-sm{padding:9px 16px;font-size:13px;width:auto;border-radius:8px;margin-top:0}
 
 /* Stats */
 .sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
@@ -131,180 +132,263 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
 
 /* Highlight value */
 .hval{color:var(--gold);font-weight:700}
+
+/* ── 연동 모달 ── */
+#syncModal{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.7);
+  display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:env(safe-area-inset-bottom,0);
+}
+#syncModal.hidden{display:none}
+.modal-box{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:20px 20px 0 0;
+  width:100%;max-width:600px;
+  padding:24px 20px 32px;
+  animation:slideUp .3s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-close{float:right;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;margin-top:-4px}
+.modal-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:16px}
+.tab-row{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+.tab-btn{flex:1;padding:10px;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.tab-btn.on{background:var(--gold);color:#0d1b2a}
+.modal-panel{display:none}.modal-panel.on{display:block}
+
+/* 동기화 코드 표시 박스 */
+.sync-code-box{
+  background:var(--card2);border:2px solid var(--gold);border-radius:12px;
+  padding:18px;text-align:center;margin:12px 0;
+}
+.sync-code{font-size:28px;font-weight:800;color:var(--gold);letter-spacing:4px;font-family:monospace}
+.sync-code-hint{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* 코드 입력 그리드 */
+.code-input-row{display:flex;gap:8px;justify-content:center;margin:16px 0}
+.code-char{width:44px;height:52px;background:var(--card2);border:2px solid var(--border);border-radius:10px;text-align:center;font-size:24px;font-weight:700;color:var(--text);font-family:monospace;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.code-char:focus{border-color:var(--gold)}
 </style>
 </head>
 <body>
 
 <header class="hdr">
-  <h1>💤 수면 &amp; 건강 트래커</h1>
-  <p>수면 · 몸무게 · 공복혈당 — 나만의 최적 루틴 찾기</p>
+<h1>💤 수면 &amp; 건강 트래커</h1>
+<p>수면 · 몸무게 · 공복혈당 — 나만의 최적 루틴 찾기</p>
 </header>
 
-<div id="syncBar" class="s-off">⚫ 로컬 모드</div>
+<div id="syncBar" class="s-off" onclick="openSyncModal()">⚫ 탭하여 기기 연동 설정</div>
 
 <!-- ══ TAB: 기록 ══ -->
 <div id="pan-record" class="pan on">
 
-  <!-- 수면 기록 -->
-  <div class="card">
-    <div class="ctitle">🌙 수면 기록</div>
+<!-- 수면 기록 -->
+<div class="card">
+<div class="ctitle">🌙 수면 기록</div>
 
-    <div class="fg">
-      <label class="fl">📅 날짜</label>
-      <input type="date" id="eDate" class="fi">
-    </div>
+<div class="fg">
+<label class="fl">📅 날짜</label>
+<input type="date" id="eDate" class="fi">
+</div>
 
-    <div class="row2">
-      <div class="fg" style="margin-bottom:0">
-        <label class="fl">🌙 수면 시간</label>
-        <div class="num-wrap">
-          <button class="num-btn" data-target="eSleep" data-step="0.5" data-dir="-1">−</button>
-          <input type="number" id="eSleep" class="num-input" value="7.0" min="2" max="14" step="0.5">
-          <span class="num-unit">h</span>
-          <button class="num-btn" data-target="eSleep" data-step="0.5" data-dir="1">+</button>
-        </div>
-      </div>
-      <div class="fg" style="margin-bottom:0">
-        <label class="fl">⌚ 워치 점수</label>
-        <div class="num-wrap">
-          <button class="num-btn" data-target="eWatch" data-step="1" data-dir="-1">−</button>
-          <input type="number" id="eWatch" class="num-input" placeholder="—" min="0" max="100" step="1">
-          <span class="num-unit">점</span>
-          <button class="num-btn" data-target="eWatch" data-step="1" data-dir="1">+</button>
-        </div>
-      </div>
-    </div>
+<div class="row2">
+<div class="fg" style="margin-bottom:0">
+<label class="fl">🌙 수면 시간</label>
+<div class="num-wrap">
+<button class="num-btn" data-target="eSleep" data-step="0.5" data-dir="-1">−</button>
+<input type="number" id="eSleep" class="num-input" value="7.0" min="2" max="14" step="0.5">
+<span class="num-unit">h</span>
+<button class="num-btn" data-target="eSleep" data-step="0.5" data-dir="1">+</button>
+</div>
+</div>
+<div class="fg" style="margin-bottom:0">
+<label class="fl">⌚ 워치 점수</label>
+<div class="num-wrap">
+<button class="num-btn" data-target="eWatch" data-step="1" data-dir="-1">−</button>
+<input type="number" id="eWatch" class="num-input" placeholder="—" min="0" max="100" step="1">
+<span class="num-unit">점</span>
+<button class="num-btn" data-target="eWatch" data-step="1" data-dir="1">+</button>
+</div>
+</div>
+</div>
 
-    <div class="fg" style="margin-top:14px">
-      <label class="fl">😊 오늘의 기분 점수 (1–10)</label>
-      <div class="mgrid" id="moodGrid"></div>
-    </div>
+<div class="fg" style="margin-top:14px">
+<label class="fl">😊 오늘의 기분 점수 (1–10)</label>
+<div class="mgrid" id="moodGrid"></div>
+</div>
 
-    <div class="fg">
-      <label class="fl">💬 메모 <span style="color:var(--muted);font-weight:400">(선택)</span></label>
-      <input type="text" id="eMemo" class="fi" placeholder="오늘 특이사항...">
-    </div>
+<div class="fg">
+<label class="fl">💬 메모 <span style="color:var(--muted);font-weight:400">(선택)</span></label>
+<input type="text" id="eMemo" class="fi" placeholder="오늘 특이사항...">
+</div>
 
-    <button class="btn btn-gold" id="saveBtn">💾 수면 기록 저장</button>
-  </div>
+<button class="btn btn-gold" id="saveBtn">💾 수면 기록 저장</button>
+</div>
 
-  <!-- 건강 기록 -->
-  <div class="card">
-    <div class="ctitle">🩺 건강 기록</div>
+<!-- 건강 기록 -->
+<div class="card">
+<div class="ctitle">🩺 건강 기록</div>
 
-    <div class="row2">
-      <div class="fg" style="margin-bottom:0">
-        <label class="fl">⚖️ 몸무게</label>
-        <div class="num-wrap">
-          <button class="num-btn" data-target="eWeight" data-step="0.1" data-dir="-1">−</button>
-          <input type="number" id="eWeight" class="num-input" placeholder="—" min="30" max="200" step="0.1">
-          <span class="num-unit">kg</span>
-          <button class="num-btn" data-target="eWeight" data-step="0.1" data-dir="1">+</button>
-        </div>
-      </div>
-      <div class="fg" style="margin-bottom:0">
-        <label class="fl">🩸 공복혈당</label>
-        <div class="num-wrap">
-          <button class="num-btn" data-target="eGlucose" data-step="1" data-dir="-1">−</button>
-          <input type="number" id="eGlucose" class="num-input" placeholder="—" min="50" max="400" step="1">
-          <span class="num-unit">mg</span>
-          <button class="num-btn" data-target="eGlucose" data-step="1" data-dir="1">+</button>
-        </div>
-      </div>
-    </div>
+<div class="row2">
+<div class="fg" style="margin-bottom:0">
+<label class="fl">⚖️ 몸무게</label>
+<div class="num-wrap">
+<button class="num-btn" data-target="eWeight" data-step="0.1" data-dir="-1">−</button>
+<input type="number" id="eWeight" class="num-input" placeholder="—" min="30" max="200" step="0.1">
+<span class="num-unit">kg</span>
+<button class="num-btn" data-target="eWeight" data-step="0.1" data-dir="1">+</button>
+</div>
+</div>
+<div class="fg" style="margin-bottom:0">
+<label class="fl">🩸 공복혈당</label>
+<div class="num-wrap">
+<button class="num-btn" data-target="eGlucose" data-step="1" data-dir="-1">−</button>
+<input type="number" id="eGlucose" class="num-input" placeholder="—" min="50" max="400" step="1">
+<span class="num-unit">mg</span>
+<button class="num-btn" data-target="eGlucose" data-step="1" data-dir="1">+</button>
+</div>
+</div>
+</div>
 
-    <button class="btn btn-gold" id="saveHealthBtn" style="margin-top:14px">💾 건강 기록 저장</button>
-  </div>
+<button class="btn btn-gold" id="saveHealthBtn" style="margin-top:14px">💾 건강 기록 저장</button>
+</div>
 
-  <div id="todayCard"></div>
+<div id="todayCard"></div>
 </div>
 
 <!-- ══ TAB: 대시보드 ══ -->
 <div id="pan-dash" class="pan">
-  <div id="dashCont"><div class="empty"><div class="ei">📊</div><p>기록을 시작하면<br>대시보드가 표시됩니다</p></div></div>
+<div id="dashCont"><div class="empty"><div class="ei">📊</div><p>기록을 시작하면<br>대시보드가 표시됩니다</p></div></div>
 </div>
 
 <!-- ══ TAB: 월별 ══ -->
 <div id="pan-month" class="pan">
-  <div class="mnav">
-    <button class="marr" id="mPrev">‹</button>
-    <div class="mdisp" id="mDisp"></div>
-    <button class="marr" id="mNext">›</button>
-  </div>
-  <div id="monthCont"><div class="empty"><div class="ei">📅</div><p>이 달의 기록이 없습니다</p></div></div>
+<div class="mnav">
+<button class="marr" id="mPrev">‹</button>
+<div class="mdisp" id="mDisp"></div>
+<button class="marr" id="mNext">›</button>
+</div>
+<div id="monthCont"><div class="empty"><div class="ei">📅</div><p>이 달의 기록이 없습니다</p></div></div>
 </div>
 
 <!-- ══ TAB: 분석 ══ -->
 <div id="pan-analysis" class="pan">
-  <div id="analysisCont"><div class="empty"><div class="ei">🎯</div><p>최소 <strong style="color:var(--gold)">7일</strong> 이상 기록하면<br>최적 수면 분석이 시작됩니다</p></div></div>
+<div id="analysisCont"><div class="empty"><div class="ei">🎯</div><p>최소 <strong style="color:var(--gold)">7일</strong> 이상 기록하면<br>최적 수면 분석이 시작됩니다</p></div></div>
 </div>
 
 <!-- ══ TAB: 설정 ══ -->
 <div id="pan-settings" class="pan">
-  <div class="card">
-    <div class="ctitle">🔑 GitHub 토큰 동기화</div>
-    <div class="ibox">
-      <strong>모든 기기에서 같은 GitHub 토큰</strong>을 입력하면 30초마다 실시간 동기화됩니다.
-    </div>
-    <div style="margin-bottom:16px">
-      <div class="step"><div class="step-num">1</div><div class="step-text"><strong>github.com → Settings → Developer settings</strong><br>→ Personal access tokens → Tokens (classic)</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Generate new token</strong> → Note: 수면트래커 → Expiration: No expiration</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">Scopes: <strong>gist</strong> ✓ → Generate token</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">발급된 토큰(ghp_...)을 아래에 붙여넣기</div></div>
-    </div>
-    <div class="fg"><label class="fl">GitHub Personal Access Token</label><textarea id="sToken" class="sta" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></textarea></div>
-    <button class="btn btn-gold" id="connectBtn">🔗 연결하기</button>
-  </div>
-  <div class="card" id="syncStatusCard" style="display:none">
-    <div class="ctitle">📡 동기화 상태</div>
-    <div id="syncDetail" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
-  </div>
-  <div class="card">
-    <div class="ctitle">📱 멀티디바이스 사용법</div>
-    <div class="ibox">URL: <strong>https://yjjn2005.github.io/sleep-tracker/</strong><br>모든 기기에서 같은 URL + 같은 GitHub 토큰 입력<br>데이터는 30초마다 자동 동기화됩니다</div>
-  </div>
-  <div class="card">
-    <div class="ctitle">🗑️ 데이터 관리</div>
-    <button class="btn btn-red" id="clearBtn">로컬 캐시 초기화</button>
-  </div>
+<div class="card">
+<div class="ctitle">📡 동기화 현황</div>
+<div id="settingsSyncStatus" style="font-size:13px;color:var(--muted);line-height:1.9;margin-bottom:12px">연동되지 않았습니다.</div>
+<button class="btn btn-gold" onclick="openSyncModal()">📱 기기 연동 관리</button>
+</div>
+<div class="card">
+<div class="ctitle">🗑️ 데이터 관리</div>
+<button class="btn btn-red" id="clearBtn">로컬 캐시 초기화</button>
+</div>
 </div>
 
 <nav class="bnav">
-  <button class="nb on" data-tab="record"><span class="ic">📝</span>기록</button>
-  <button class="nb" data-tab="dash"><span class="ic">📊</span>대시보드</button>
-  <button class="nb" data-tab="month"><span class="ic">📅</span>월별</button>
-  <button class="nb" data-tab="analysis"><span class="ic">🎯</span>분석</button>
-  <button class="nb" data-tab="settings"><span class="ic">⚙️</span>설정</button>
+<button class="nb on" data-tab="record"><span class="ic">📝</span>기록</button>
+<button class="nb" data-tab="dash"><span class="ic">📊</span>대시보드</button>
+<button class="nb" data-tab="month"><span class="ic">📅</span>월별</button>
+<button class="nb" data-tab="analysis"><span class="ic">🎯</span>분석</button>
+<button class="nb" data-tab="settings"><span class="ic">⚙️</span>설정</button>
 </nav>
+
+<!-- ══ 동기화 모달 ══ -->
+<div id="syncModal" class="hidden">
+<div class="modal-box">
+<button class="modal-close" onclick="closeSyncModal()">✕</button>
+<div class="modal-title">📱 기기 연동</div>
+
+<div class="tab-row" id="modalTabRow">
+<button class="tab-btn on" onclick="switchModalTab('new')">첫 기기 설정</button>
+<button class="tab-btn" onclick="switchModalTab('join')">다른 기기 연결</button>
+<button class="tab-btn" onclick="switchModalTab('code')">내 코드 보기</button>
+</div>
+
+<!-- 첫 기기: 토큰 입력 + Gist 자동 생성 -->
+<div id="modal-new" class="modal-panel on">
+<div class="ibox">
+<strong>처음 설정하는 기기</strong>라면 GitHub 토큰을 입력하세요.<br>
+자동으로 Gist를 생성하고 <strong>동기화 코드</strong>를 발급합니다.
+</div>
+<div style="margin-bottom:14px">
+<div class="step"><div class="step-num">1</div><div class="step-text"><strong>github.com → Settings → Developer settings</strong><br>→ Personal access tokens → Tokens (classic)</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-text"><strong>Generate new token</strong> → Note: 수면트래커 → Expiration: No expiration</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-text">Scopes: <strong>gist</strong> ✓ → Generate token → 복사</div></div>
+</div>
+<div class="fg">
+<label class="fl">GitHub Personal Access Token</label>
+<textarea id="sTokenNew" class="sta" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></textarea>
+</div>
+<button class="btn btn-gold" id="connectNewBtn">🔗 연결 시작</button>
+</div>
+
+<!-- 다른 기기: 동기화 코드 입력 -->
+<div id="modal-join" class="modal-panel">
+<div class="ibox">
+첫 번째 기기의 <strong>내 코드 보기</strong> 탭에서<br>
+6자리 동기화 코드와 GitHub 토큰을 확인하세요.
+</div>
+<div class="fg">
+<label class="fl">GitHub Personal Access Token</label>
+<textarea id="sTokenJoin" class="sta" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" spellcheck="false"></textarea>
+</div>
+<div class="fg">
+<label class="fl" style="text-align:center;display:block;margin-bottom:10px">6자리 동기화 코드</label>
+<div class="code-input-row" id="codeInputRow">
+<input class="code-char" maxlength="1" inputmode="text" autocomplete="off">
+<input class="code-char" maxlength="1" inputmode="text" autocomplete="off">
+<input class="code-char" maxlength="1" inputmode="text" autocomplete="off">
+<input class="code-char" maxlength="1" inputmode="text" autocomplete="off">
+<input class="code-char" maxlength="1" inputmode="text" autocomplete="off">
+<input class="code-char" maxlength="1" inputmode="text" autocomplete="off">
+</div>
+</div>
+<button class="btn btn-blue" id="joinBtn">🔗 연결하기</button>
+</div>
+
+<!-- 내 코드 보기 -->
+<div id="modal-code" class="modal-panel">
+<div id="codeDisplayArea">
+<div class="ibox">먼저 <strong>첫 기기 설정</strong> 탭에서 연결하세요.</div>
+</div>
+</div>
+
+</div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ════════════════════════════════════════════
-//  수면 & 건강 트래커  —  GitHub Gist Sync
+// 수면 & 건강 트래커 — Multi-device Gist Sync
 // ════════════════════════════════════════════
 
-const GIST_ID   = 'd393d08153aa5ef8c17ea766cf0f872e';
-const GIST_FILE = 'sleep-data.json';
-const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
-const POLL_MS   = 30000;
+const GIST_FILE = 'sleep-tracker-data.json';
+const POLL_MS = 15000; // 15초
 
-let entries  = [];   // sleep entries
-let health   = [];   // health entries (weight, glucose)
-let ghToken  = ls('sleepTracker_token') || '';
-let selMood  = 0;
+let entries = [];
+let health  = [];
+let ghToken = ls('st_token') || '';
+let gistId  = ls('st_gist_id') || '';
+let selMood = 0;
 let curMonth = new Date();
 const charts = {};
 let pollTimer = null, lastEtag = '';
 
-// ── Utils ─────────────────────────────────
+// ── Utils ──────────────────────────────────
 function ls(k){ try{return localStorage.getItem(k)}catch{return null} }
 function lsSet(k,v){ try{localStorage.setItem(k,v)}catch{} }
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 };
-const pad  = n => String(n).padStart(2,'0');
-const avg  = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0;
+const pad = n => String(n).padStart(2,'0');
+const avg = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0;
 const fmtH = v => parseFloat(v).toFixed(1);
 
 function moodColor(s){ return s>=8?'var(--green)':s>=5?'var(--orange)':'var(--red)' }
@@ -316,34 +400,281 @@ function glucoseBadge(g){
   return '<span class="bdg br">高</span>';
 }
 
-function setSync(cls,msg){ const e=document.getElementById('syncBar'); e.className=`s-${cls}`;e.textContent=msg }
-function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2600) }
+function setSync(cls, msg){
+  const e = document.getElementById('syncBar');
+  e.className = `s-${cls}`;
+  e.textContent = msg;
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 2600);
+}
 function killChart(n){ if(charts[n]){charts[n].destroy();delete charts[n]} }
 function mkChart(n,ctx,cfg){ killChart(n);charts[n]=new Chart(ctx,cfg) }
 
-// ── Gist API ──────────────────────────────
+// ── Gist ID → 6자리 코드 변환 ──────────────
+// Gist ID는 32자 hex. 앞 6자를 대문자로 사용
+function gistToCode(id){ return id.slice(0,6).toUpperCase() }
+
+// ── Gist API ───────────────────────────────
 const ghH = () => ({ Authorization:`token ${ghToken}`, 'Content-Type':'application/json' });
+const gistAPI = () => `https://api.github.com/gists/${gistId}`;
 
 async function loadGist(){
-  const res = await fetch(GIST_API, { headers: ghToken ? { ...ghH(), ...(lastEtag?{'If-None-Match':lastEtag}:{}) } : {} });
-  if(res.status===304) return null;
+  if(!gistId) return null;
+  const hdrs = ghToken
+    ? { ...ghH(), ...(lastEtag ? {'If-None-Match':lastEtag} : {}) }
+    : (lastEtag ? {'If-None-Match':lastEtag} : {});
+  const res = await fetch(gistAPI(), { headers: hdrs });
+  if(res.status === 304) return null;
   if(!res.ok) throw new Error(`GitHub ${res.status}`);
-  lastEtag = res.headers.get('ETag')||'';
+  lastEtag = res.headers.get('ETag') || '';
   const data = await res.json();
-  const raw  = JSON.parse(data.files[GIST_FILE]?.content || '{}');
+  const raw = JSON.parse(data.files[GIST_FILE]?.content || '{}');
   return { entries: raw.entries||[], health: raw.health||[] };
 }
 
 async function saveGist(){
-  const res = await fetch(GIST_API, {
+  if(!gistId || !ghToken) return;
+  const res = await fetch(gistAPI(), {
     method:'PATCH', headers:ghH(),
     body: JSON.stringify({ files:{ [GIST_FILE]:{ content:JSON.stringify({entries,health}) } } })
   });
   if(!res.ok) throw new Error(`GitHub ${res.status}`);
-  lastEtag='';
+  lastEtag = '';
 }
 
-// ── Init ──────────────────────────────────
+async function createGist(){
+  const res = await fetch('https://api.github.com/gists', {
+    method:'POST', headers:ghH(),
+    body: JSON.stringify({
+      description: '💤 수면 & 건강 트래커 데이터',
+      public: false,
+      files: { [GIST_FILE]: { content: JSON.stringify({entries:[],health:[]}) } }
+    })
+  });
+  if(!res.ok) throw new Error(`Gist 생성 실패 ${res.status}`);
+  const data = await res.json();
+  return data.id;
+}
+
+// Gist ID로 바로 접근 (토큰 없어도 공개 Gist 읽기 가능, 비공개는 토큰 필요)
+async function connectByGistId(id){
+  const res = await fetch(`https://api.github.com/gists/${id}`, { headers: ghH() });
+  if(!res.ok) throw new Error(`Gist 접근 실패 ${res.status} — 코드 또는 토큰 확인`);
+  const data = await res.json();
+  const raw = JSON.parse(data.files[GIST_FILE]?.content || '{}');
+  return { entries: raw.entries||[], health: raw.health||[] };
+}
+
+// ── 모달 ──────────────────────────────────
+function openSyncModal(){
+  document.getElementById('syncModal').classList.remove('hidden');
+  // 이미 연결된 경우 코드 탭 활성화
+  if(gistId && ghToken){
+    switchModalTab('code');
+    renderSyncCode();
+  } else {
+    switchModalTab('new');
+  }
+  // 저장된 토큰 자동 채우기
+  if(ghToken){
+    document.getElementById('sTokenNew').value = ghToken;
+    document.getElementById('sTokenJoin').value = ghToken;
+  }
+}
+function closeSyncModal(){ document.getElementById('syncModal').classList.add('hidden') }
+
+function switchModalTab(tab){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('on', ['new','join','code'][i]===tab);
+  });
+  document.querySelectorAll('.modal-panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById(`modal-${tab}`).classList.add('on');
+  if(tab==='code') renderSyncCode();
+}
+
+function renderSyncCode(){
+  const el = document.getElementById('codeDisplayArea');
+  if(!gistId){
+    el.innerHTML = '<div class="ibox">먼저 <strong>첫 기기 설정</strong> 탭에서 연결하세요.</div>';
+    return;
+  }
+  const code = gistToCode(gistId);
+  const maskedToken = ghToken ? ghToken.slice(0,6)+'…'+ghToken.slice(-4) : '—';
+  el.innerHTML = `
+    <div class="ibox">이 코드를 <strong>다른 기기의 "다른 기기 연결"</strong> 탭에 입력하세요.</div>
+    <div class="sync-code-box">
+      <div class="sync-code">${code}</div>
+      <div class="sync-code-hint">동기화 코드 (6자리)</div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.7;margin:10px 0">
+      ⚠️ 다른 기기에서도 <strong style="color:var(--text)">같은 GitHub 토큰</strong>이 필요합니다.<br>
+      토큰: <span style="color:var(--gold);font-family:monospace">${maskedToken}</span>
+    </p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-gold btn-sm" onclick="copyCode('${code}')">📋 코드 복사</button>
+      <button class="btn btn-gold btn-sm" onclick="copyToken()">📋 토큰 복사</button>
+    </div>
+  `;
+}
+
+async function copyCode(code){
+  try{ await navigator.clipboard.writeText(code); toast('✅ 코드 복사됨'); }
+  catch{ toast('코드: '+code); }
+}
+async function copyToken(){
+  if(!ghToken){ toast('토큰 없음'); return; }
+  try{ await navigator.clipboard.writeText(ghToken); toast('✅ 토큰 복사됨'); }
+  catch{ toast('복사 실패 — 직접 복사하세요'); }
+}
+
+// 코드 입력 자동 포커스
+document.getElementById('codeInputRow').addEventListener('input', e => {
+  const inputs = [...document.querySelectorAll('.code-char')];
+  const idx = inputs.indexOf(e.target);
+  if(e.target.value && idx < inputs.length-1) inputs[idx+1].focus();
+});
+document.getElementById('codeInputRow').addEventListener('keydown', e => {
+  if(e.key==='Backspace' && !e.target.value){
+    const inputs = [...document.querySelectorAll('.code-char')];
+    const idx = inputs.indexOf(e.target);
+    if(idx>0) inputs[idx-1].focus();
+  }
+});
+
+// ── 첫 기기 연결 ───────────────────────────
+document.getElementById('connectNewBtn').addEventListener('click', async ()=>{
+  const tok = document.getElementById('sTokenNew').value.trim();
+  if(!tok){ toast('토큰을 입력하세요'); return; }
+  ghToken = tok; lsSet('st_token', tok);
+
+  const btn = document.getElementById('connectNewBtn');
+  btn.disabled = true; btn.textContent = '⏳ Gist 생성 중...';
+
+  try{
+    // 기존 Gist ID가 있으면 재사용 시도
+    if(gistId){
+      try{
+        const d = await connectByGistId(gistId);
+        entries = d.entries; health = d.health;
+        saveCache(); refresh();
+        toast('✅ 기존 데이터에 재연결됨');
+        startPoll();
+        closeSyncModal();
+        return;
+      }catch{}
+    }
+    // 새 Gist 생성
+    const newId = await createGist();
+    gistId = newId; lsSet('st_gist_id', newId);
+    toast('✅ Gist 생성 완료! 동기화 코드를 확인하세요');
+    startPoll();
+    switchModalTab('code');
+    renderSyncCode();
+  }catch(e){
+    toast('❌ ' + e.message);
+    ghToken=''; gistId='';
+  }finally{
+    btn.disabled = false; btn.textContent = '🔗 연결 시작';
+  }
+});
+
+// ── 다른 기기 연결 ─────────────────────────
+document.getElementById('joinBtn').addEventListener('click', async ()=>{
+  const tok = document.getElementById('sTokenJoin').value.trim();
+  const chars = [...document.querySelectorAll('.code-char')].map(i=>i.value.toUpperCase());
+  const code = chars.join('');
+
+  if(!tok){ toast('GitHub 토큰을 입력하세요'); return; }
+  if(code.length !== 6 || chars.some(c=>!c)){ toast('6자리 코드를 모두 입력하세요'); return; }
+
+  ghToken = tok; lsSet('st_token', tok);
+
+  const btn = document.getElementById('joinBtn');
+  btn.disabled = true; btn.textContent = '⏳ 연결 중...';
+
+  try{
+    // 코드(앞6자)로 Gist 검색
+    const searchRes = await fetch(
+      `https://api.github.com/gists?per_page=100`,
+      { headers: ghH() }
+    );
+    if(!searchRes.ok) throw new Error(`인증 실패 ${searchRes.status}`);
+    const gists = await searchRes.json();
+    const found = gists.find(g => g.id.slice(0,6).toUpperCase() === code);
+    if(!found) throw new Error(`코드 "${code}"에 해당하는 Gist를 찾을 수 없습니다`);
+
+    gistId = found.id; lsSet('st_gist_id', gistId);
+    const d = await connectByGistId(gistId);
+    entries = d.entries; health = d.health;
+    saveCache(); refresh();
+    toast('✅ 연결 완료! 데이터 동기화됨');
+    startPoll();
+    closeSyncModal();
+  }catch(e){
+    toast('❌ ' + e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '🔗 연결하기';
+  }
+});
+
+// ── Polling ────────────────────────────────
+function startPoll(){
+  if(pollTimer) clearInterval(pollTimer);
+  updateSyncBar('sync', '🟡 연결 중...');
+  // 즉시 첫 로드
+  pollGist().then(()=>{
+    pollTimer = setInterval(pollGist, POLL_MS);
+  });
+}
+
+async function pollGist(){
+  if(!gistId || !ghToken) return;
+  try{
+    const d = await loadGist();
+    if(!d) return; // 304 — 변경 없음
+    entries = d.entries; health = d.health;
+    saveCache(); refresh();
+    const t = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    updateSyncBar('ok', `🟢 동기화됨 ${t}`);
+    updateSettingsStatus();
+  }catch(e){
+    updateSyncBar('err', '🔴 동기화 오류 (탭하여 재설정)');
+  }
+}
+
+function updateSyncBar(cls, msg){
+  const e = document.getElementById('syncBar');
+  e.className = `s-${cls}`;
+  e.textContent = msg;
+}
+
+function updateSettingsStatus(){
+  const el = document.getElementById('settingsSyncStatus');
+  if(!gistId){
+    el.innerHTML = '연동되지 않았습니다. 아래 버튼을 눌러 설정하세요.';
+    return;
+  }
+  const code = gistToCode(gistId);
+  el.innerHTML = `
+    🟢 <strong style="color:var(--green)">연동됨</strong><br>
+    동기화 코드: <span class="hval" style="letter-spacing:2px;font-family:monospace">${code}</span><br>
+    수면기록: <span class="hval">${entries.length}일</span> &nbsp; 건강기록: <span class="hval">${health.length}일</span><br>
+    <span style="font-size:11px">15초마다 자동 갱신</span>
+  `;
+}
+
+function saveCache(){ lsSet('st_cache', JSON.stringify({entries,health})); }
+
+function clearCache(){
+  if(!confirm('로컬 캐시를 초기화합니까?')) return;
+  localStorage.removeItem('st_cache');
+  entries=[]; health=[]; refresh(); toast('🗑️ 캐시 초기화됨');
+}
+
+// ── Init ───────────────────────────────────
 function init(){
   document.getElementById('eDate').value = today();
 
@@ -359,11 +690,11 @@ function init(){
   // stepper buttons
   document.querySelectorAll('.num-btn').forEach(btn=>{
     btn.addEventListener('click',()=>{
-      const inp  = document.getElementById(btn.dataset.target);
+      const inp = document.getElementById(btn.dataset.target);
       const step = parseFloat(btn.dataset.step);
       const dir  = parseFloat(btn.dataset.dir);
       const cur  = parseFloat(inp.value)||0;
-      const next = Math.round((cur + step*dir)*10)/10;
+      const next = Math.round((cur+step*dir)*10)/10;
       const mn   = parseFloat(inp.min)||0;
       const mx   = parseFloat(inp.max)||9999;
       if(next>=mn && next<=mx) inp.value = next;
@@ -379,87 +710,51 @@ function init(){
   document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>goTab(b.dataset.tab,b)));
 
   // action buttons
-  document.getElementById('saveBtn').onclick      = saveSleep;
+  document.getElementById('saveBtn').onclick = saveSleep;
   document.getElementById('saveHealthBtn').onclick = saveHealth;
-  document.getElementById('connectBtn').onclick    = connectGist;
-  document.getElementById('clearBtn').onclick      = clearCache;
+  document.getElementById('clearBtn').onclick = clearCache;
 
-  // restore token
-  if(ghToken){ document.getElementById('sToken').value=ghToken; startSync(); }
-
-  // local cache
-  const c=ls('sleepTracker_cache');
+  // 로컬 캐시 복원
+  const c = ls('st_cache');
   if(c){ const d=JSON.parse(c); entries=d.entries||[]; health=d.health||[]; refresh() }
+
+  // 저장된 토큰+Gist ID 있으면 자동 연결
+  if(ghToken && gistId){
+    updateSyncBar('sync', '🟡 재연결 중...');
+    startPoll();
+  } else if(!ghToken){
+    // 처음 방문 시 모달 안내
+    setTimeout(()=>{
+      if(!ls('st_token')) openSyncModal();
+    }, 800);
+  }
+
+  updateSettingsStatus();
 }
 
-// ── Tab nav ───────────────────────────────
+// ── Tab nav ────────────────────────────────
 function goTab(tab,btn){
   document.querySelectorAll('.pan').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
   document.getElementById(`pan-${tab}`).classList.add('on');
   btn.classList.add('on');
-  if(tab==='dash')     renderDash();
-  if(tab==='month')    renderMonth();
+  if(tab==='dash') renderDash();
+  if(tab==='month') renderMonth();
   if(tab==='analysis') renderAnalysis();
+  if(tab==='settings'){ updateSettingsStatus(); }
 }
 
-// ── Sync ──────────────────────────────────
-async function connectGist(){
-  const tok=document.getElementById('sToken').value.trim();
-  if(!tok){toast('토큰을 입력하세요');return;}
-  ghToken=tok; lsSet('sleepTracker_token',tok);
-  toast('🔗 연결 중...');
-  startSync();
-}
-
-async function startSync(){
-  if(!ghToken) return;
-  if(pollTimer) clearInterval(pollTimer);
-  setSync('sync','🟡 GitHub Gist 연결 중...');
-  try{
-    const d=await loadGist();
-    if(d){ entries=d.entries; health=d.health; saveCache(); refresh(); }
-    setSync('ok','🟢 동기화 완료');
-    showSyncDetail();
-    pollTimer=setInterval(pollGist,POLL_MS);
-  }catch(e){ setSync('err','🔴 연결 실패 — 토큰 확인');toast('❌ '+e.message); }
-}
-
-async function pollGist(){
-  try{
-    const d=await loadGist();
-    if(!d) return;
-    entries=d.entries; health=d.health; saveCache(); refresh();
-    setSync('ok',`🟢 동기화됨 ${new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`);
-  }catch(e){ setSync('err','🔴 동기화 오류'); }
-}
-
-function saveCache(){ lsSet('sleepTracker_cache',JSON.stringify({entries,health})); }
-
-function showSyncDetail(){
-  const card=document.getElementById('syncStatusCard');
-  const det=document.getElementById('syncDetail');
-  card.style.display='block';
-  det.innerHTML=`수면기록: <span class="hval">${entries.length}일</span> &nbsp; 건강기록: <span class="hval">${health.length}일</span><br>30초마다 자동 갱신`;
-}
-
-function clearCache(){
-  if(!confirm('로컬 캐시를 초기화합니까?')) return;
-  localStorage.removeItem('sleepTracker_cache');
-  entries=[]; health=[]; refresh(); toast('🗑️ 캐시 초기화됨');
-}
-
-// ── Mood ──────────────────────────────────
+// ── Mood ───────────────────────────────────
 function pickMood(v){
   selMood=v;
   for(let i=1;i<=10;i++) document.getElementById(`mb${i}`).classList.toggle('on',i===v);
 }
 
-// ── Month ─────────────────────────────────
+// ── Month ──────────────────────────────────
 function shiftMonth(d){ curMonth=new Date(curMonth.getFullYear(),curMonth.getMonth()+d,1); updateMDisp(); }
 function updateMDisp(){ document.getElementById('mDisp').textContent=`${curMonth.getFullYear()}년 ${curMonth.getMonth()+1}월`; }
 
-// ── Save sleep ────────────────────────────
+// ── Save sleep ─────────────────────────────
 async function saveSleep(){
   const date       = document.getElementById('eDate').value;
   const sleepHours = parseFloat(document.getElementById('eSleep').value);
@@ -468,32 +763,30 @@ async function saveSleep(){
   const moodScore  = selMood;
   const memo       = document.getElementById('eMemo').value.trim();
 
-  if(!date)       { toast('날짜를 선택하세요'); return; }
+  if(!date){ toast('날짜를 선택하세요'); return; }
   if(isNaN(sleepHours)||sleepHours<=0){ toast('수면 시간을 입력하세요'); return; }
-  if(!moodScore)  { toast('기분 점수를 선택하세요 (1–10)'); return; }
+  if(!moodScore){ toast('기분 점수를 선택하세요 (1–10)'); return; }
 
   const rec={date,sleepHours,watchScore,moodScore,memo,ts:Date.now()};
   upsert(entries,rec,'date');
   saveCache(); refresh();
 
-  if(ghToken){
-    setSync('sync','🟡 저장 중...');
-    try{ await saveGist(); lastEtag=''; setSync('ok','🟢 동기화됨'); toast('✅ 수면 기록 저장됨'); }
-    catch(e){ setSync('err','🔴 저장 실패'); toast('⚠️ 로컬 저장됨'); }
-  } else { toast('✅ 로컬 저장됨'); }
+  if(ghToken && gistId){
+    updateSyncBar('sync','🟡 저장 중...');
+    try{ await saveGist(); updateSyncBar('ok','🟢 동기화됨'); toast('✅ 수면 기록 저장됨'); }
+    catch(e){ updateSyncBar('err','🔴 저장 실패'); toast('⚠️ 로컬 저장됨'); }
+  } else { toast('✅ 로컬 저장됨 (연동 미설정)'); }
 
-  // reset sleep form
   selMood=0;
   for(let i=1;i<=10;i++) document.getElementById(`mb${i}`).classList.remove('on');
   document.getElementById('eWatch').value='';
   document.getElementById('eMemo').value='';
   document.getElementById('eDate').value=today();
   document.getElementById('eSleep').value='7.0';
-
   showTodayCard(rec,null);
 }
 
-// ── Save health ───────────────────────────
+// ── Save health ────────────────────────────
 async function saveHealth(){
   const date    = document.getElementById('eDate').value;
   const wRaw    = document.getElementById('eWeight').value;
@@ -508,16 +801,14 @@ async function saveHealth(){
   upsert(health,rec,'date');
   saveCache(); refresh();
 
-  if(ghToken){
-    setSync('sync','🟡 저장 중...');
-    try{ await saveGist(); lastEtag=''; setSync('ok','🟢 동기화됨'); toast('✅ 건강 기록 저장됨'); }
-    catch(e){ setSync('err','🔴 저장 실패'); toast('⚠️ 로컬 저장됨'); }
-  } else { toast('✅ 로컬 저장됨'); }
+  if(ghToken && gistId){
+    updateSyncBar('sync','🟡 저장 중...');
+    try{ await saveGist(); updateSyncBar('ok','🟢 동기화됨'); toast('✅ 건강 기록 저장됨'); }
+    catch(e){ updateSyncBar('err','🔴 저장 실패'); toast('⚠️ 로컬 저장됨'); }
+  } else { toast('✅ 로컬 저장됨 (연동 미설정)'); }
 
   document.getElementById('eWeight').value='';
   document.getElementById('eGlucose').value='';
-
-  // find matching sleep record for today card
   const sleepRec=entries.find(e=>e.date===date)||null;
   showTodayCard(sleepRec,rec);
 }
@@ -530,41 +821,41 @@ function upsert(arr,rec,key){
 }
 
 function showTodayCard(sleep,hlth){
-  const s=sleep, h=hlth;
+  const s=sleep,h=hlth;
   document.getElementById('todayCard').innerHTML=`
-    <div class="card" style="border-color:var(--green)">
-      <div class="ctitle" style="color:var(--green)">✅ 기록 완료</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.9">
-        ${s?`수면: <span class="hval">${fmtH(s.sleepHours)}h</span> &nbsp; 기분: <span style="color:${moodColor(s.moodScore)}">${s.moodScore}/10</span>${s.watchScore!=null?` &nbsp; 워치: <span class="hval">${s.watchScore}점</span>`:''}`:'' }
-        ${s&&h?'<br>':''}
-        ${h?`${h.weight!=null?`몸무게: <span class="hval">${h.weight}kg</span> &nbsp;`:''}${h.glucose!=null?`공복혈당: <span class="hval">${h.glucose}mg/dL</span> ${glucoseBadge(h.glucose)}`:''}` : ''}
-      </p>
-    </div>`;
+<div class="card" style="border-color:var(--green)">
+<div class="ctitle" style="color:var(--green)">✅ 기록 완료</div>
+<p style="font-size:13px;color:var(--text);line-height:1.9">
+${s?`수면: <span class="hval">${fmtH(s.sleepHours)}h</span> &nbsp; 기분: <span style="color:${moodColor(s.moodScore)}">${s.moodScore}/10</span>${s.watchScore!=null?` &nbsp; 워치: <span class="hval">${s.watchScore}점</span>`:''}`:''}
+${s&&h?'<br>':''}
+${h?`${h.weight!=null?`몸무게: <span class="hval">${h.weight}kg</span> &nbsp;`:''}${h.glucose!=null?`공복혈당: <span class="hval">${h.glucose}mg/dL</span> ${glucoseBadge(h.glucose)}`:''}` : ''}
+</p>
+</div>`;
 }
 
-// ── Delete ────────────────────────────────
+// ── Delete ─────────────────────────────────
 async function delEntry(ts,type){
   if(!confirm('삭제하시겠습니까?')) return;
   if(type==='sleep') entries=entries.filter(e=>e.ts!==parseInt(ts));
   else health=health.filter(e=>e.ts!==parseInt(ts));
   saveCache(); refresh();
-  if(ghToken){ try{await saveGist();lastEtag='';}catch(e){} }
+  if(ghToken&&gistId){ try{await saveGist();}catch{} }
   toast('🗑️ 삭제됨');
 }
 window.delEntry=delEntry;
 
-// ── Refresh ───────────────────────────────
+// ── Refresh ────────────────────────────────
 function refresh(){
   const a=document.querySelector('.pan.on');
   if(!a) return;
   const tab=a.id.replace('pan-','');
-  if(tab==='dash')     renderDash();
-  if(tab==='month')    renderMonth();
+  if(tab==='dash') renderDash();
+  if(tab==='month') renderMonth();
   if(tab==='analysis') renderAnalysis();
-  if(tab==='settings') showSyncDetail();
+  if(tab==='settings') updateSettingsStatus();
 }
 
-// ── Dashboard ─────────────────────────────
+// ── Dashboard ──────────────────────────────
 function renderDash(){
   const el=document.getElementById('dashCont');
   const hasAny=entries.length||health.length;
@@ -572,48 +863,40 @@ function renderDash(){
 
   const now=new Date();
   const ym=`${now.getFullYear()}-${pad(now.getMonth()+1)}`;
-
-  // sleep stats
   const mE=entries.filter(e=>e.date.startsWith(ym));
   const poolE=mE.length?mE:entries.slice(0,30);
   const as=avg(poolE.map(e=>e.sleepHours));
   const aw=avg(poolE.filter(e=>e.watchScore!=null).map(e=>e.watchScore));
   const am=avg(poolE.map(e=>e.moodScore));
 
-  // health stats
   const mH=health.filter(e=>e.date.startsWith(ym));
   const poolH=mH.length?mH:health.slice(0,30);
   const aW=avg(poolH.filter(e=>e.weight!=null).map(e=>e.weight));
   const aG=avg(poolH.filter(e=>e.glucose!=null).map(e=>e.glucose));
 
-  const glucoseColor = aG>0 ? (aG<100?'var(--green)':aG<126?'var(--orange)':'var(--red)') : 'var(--gold)';
+  const glucoseColor=aG>0?(aG<100?'var(--green)':aG<126?'var(--orange)':'var(--red)'):'var(--gold)';
 
   const recent30E=[...entries].sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
   const recent30H=[...health].sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
 
   el.innerHTML=`
-    <p style="font-size:10px;color:var(--muted);text-align:right;margin-bottom:6px">${now.getMonth()+1}월 평균</p>
-
-    <!-- 수면 통계 -->
-    <div class="sgrid">
-      <div class="scard"><div class="sv">${as>0?as.toFixed(1):'—'}<span class="su">h</span></div><div class="sl2">평균 수면</div></div>
-      <div class="scard"><div class="sv">${aw>0?Math.round(aw):'—'}</div><div class="sl2">평균 워치점수</div></div>
-      <div class="scard"><div class="sv" style="color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균 기분</div></div>
-      <div class="scard"><div class="sv">${entries.length}</div><div class="sl2">수면 기록일</div></div>
-    </div>
-
-    <!-- 건강 통계 -->
-    <div class="sgrid3" style="margin-bottom:12px">
-      <div class="scard"><div class="sv">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균 몸무게</div></div>
-      <div class="scard"><div class="sv" style="color:${glucoseColor}">${aG>0?Math.round(aG):'—'}<span class="su">mg</span></div><div class="sl2">평균 공복혈당</div></div>
-      <div class="scard"><div class="sv">${health.length}</div><div class="sl2">건강 기록일</div></div>
-    </div>
-
-    ${recent30E.length?`<div class="card"><div class="ctitle">📈 수면 시간 (최근 30일)</div><div class="ch"><canvas id="chSleep"></canvas></div></div>`:''}
-    ${recent30E.length?`<div class="card"><div class="ctitle">😊 기분 점수 추이</div><div class="ch"><canvas id="chMood"></canvas></div></div>`:''}
-    ${recent30H.filter(e=>e.weight!=null).length>=2?`<div class="card"><div class="ctitle">⚖️ 몸무게 추이</div><div class="ch"><canvas id="chWeight"></canvas></div></div>`:''}
-    ${recent30H.filter(e=>e.glucose!=null).length>=2?`<div class="card"><div class="ctitle">🩸 공복혈당 추이</div><div class="ch"><canvas id="chGlucose"></canvas></div></div>`:''}
-  `;
+<p style="font-size:10px;color:var(--muted);text-align:right;margin-bottom:6px">${now.getMonth()+1}월 평균</p>
+<div class="sgrid">
+<div class="scard"><div class="sv">${as>0?as.toFixed(1):'—'}<span class="su">h</span></div><div class="sl2">평균 수면</div></div>
+<div class="scard"><div class="sv">${aw>0?Math.round(aw):'—'}</div><div class="sl2">평균 워치점수</div></div>
+<div class="scard"><div class="sv" style="color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균 기분</div></div>
+<div class="scard"><div class="sv">${entries.length}</div><div class="sl2">수면 기록일</div></div>
+</div>
+<div class="sgrid3" style="margin-bottom:12px">
+<div class="scard"><div class="sv">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균 몸무게</div></div>
+<div class="scard"><div class="sv" style="color:${glucoseColor}">${aG>0?Math.round(aG):'—'}<span class="su">mg</span></div><div class="sl2">평균 공복혈당</div></div>
+<div class="scard"><div class="sv">${health.length}</div><div class="sl2">건강 기록일</div></div>
+</div>
+${recent30E.length?`<div class="card"><div class="ctitle">📈 수면 시간 (최근 30일)</div><div class="ch"><canvas id="chSleep"></canvas></div></div>`:''}
+${recent30E.length?`<div class="card"><div class="ctitle">😊 기분 점수 추이</div><div class="ch"><canvas id="chMood"></canvas></div></div>`:''}
+${recent30H.filter(e=>e.weight!=null).length>=2?`<div class="card"><div class="ctitle">⚖️ 몸무게 추이</div><div class="ch"><canvas id="chWeight"></canvas></div></div>`:''}
+${recent30H.filter(e=>e.glucose!=null).length>=2?`<div class="card"><div class="ctitle">🩸 공복혈당 추이</div><div class="ch"><canvas id="chGlucose"></canvas></div></div>`:''}
+`;
 
   const gx=(yMax,yMin)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8ba3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,.04)'}},y:{min:yMin,max:yMax,ticks:{color:'#8ba3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}});
 
@@ -626,21 +909,17 @@ function renderDash(){
   const wData=recent30H.filter(e=>e.weight!=null);
   if(wData.length>=2&&document.getElementById('chWeight')){
     const wVals=wData.map(e=>e.weight);
-    const wMin=Math.floor(Math.min(...wVals)-1), wMax=Math.ceil(Math.max(...wVals)+1);
-    mkChart('weight',document.getElementById('chWeight'),{type:'line',data:{labels:wData.map(e=>e.date.slice(5)),datasets:[{data:wVals,borderColor:'rgba(102,187,106,.85)',backgroundColor:'rgba(102,187,106,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},options:gx(wMax,wMin)});
+    mkChart('weight',document.getElementById('chWeight'),{type:'line',data:{labels:wData.map(e=>e.date.slice(5)),datasets:[{data:wVals,borderColor:'rgba(102,187,106,.85)',backgroundColor:'rgba(102,187,106,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},options:gx(Math.ceil(Math.max(...wVals)+1),Math.floor(Math.min(...wVals)-1))});
   }
 
   const gData=recent30H.filter(e=>e.glucose!=null);
   if(gData.length>=2&&document.getElementById('chGlucose')){
     const gVals=gData.map(e=>e.glucose);
-    const gMin=Math.floor(Math.min(...gVals)-5), gMax=Math.ceil(Math.max(...gVals)+5);
-    mkChart('glucose',document.getElementById('chGlucose'),{type:'line',data:{labels:gData.map(e=>e.date.slice(5)),datasets:[{data:gVals,borderColor:'rgba(239,83,80,.85)',backgroundColor:'rgba(239,83,80,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true,
-      segment:{borderColor:ctx=>ctx.p1.parsed.y>=126?'rgba(239,83,80,.9)':ctx.p1.parsed.y>=100?'rgba(255,167,38,.9)':'rgba(102,187,106,.9)'}
-    }]},options:{...gx(gMax,gMin),plugins:{legend:{display:false},annotation:{annotations:{normal:{type:'line',yMin:100,yMax:100,borderColor:'rgba(102,187,106,.4)',borderWidth:1,borderDash:[4,4]},pre:{type:'line',yMin:126,yMax:126,borderColor:'rgba(239,83,80,.4)',borderWidth:1,borderDash:[4,4]}}}}}});
+    mkChart('glucose',document.getElementById('chGlucose'),{type:'line',data:{labels:gData.map(e=>e.date.slice(5)),datasets:[{data:gVals,borderColor:'rgba(239,83,80,.85)',backgroundColor:'rgba(239,83,80,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true,segment:{borderColor:ctx=>ctx.p1.parsed.y>=126?'rgba(239,83,80,.9)':ctx.p1.parsed.y>=100?'rgba(255,167,38,.9)':'rgba(102,187,106,.9)'}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8ba3b8',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,.04)'}},y:{min:Math.floor(Math.min(...gVals)-5),max:Math.ceil(Math.max(...gVals)+5),ticks:{color:'#8ba3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}});
   }
 }
 
-// ── Monthly ───────────────────────────────
+// ── Monthly ────────────────────────────────
 function renderMonth(){
   const el=document.getElementById('monthCont');
   const ym=`${curMonth.getFullYear()}-${pad(curMonth.getMonth()+1)}`;
@@ -654,45 +933,43 @@ function renderMonth(){
   const aW=avg(mH.filter(e=>e.weight!=null).map(e=>e.weight));
   const aG=avg(mH.filter(e=>e.glucose!=null).map(e=>e.glucose));
 
-  // merge by date
   const allDates=[...new Set([...mE.map(e=>e.date),...mH.map(e=>e.date)])].sort((a,b)=>b.localeCompare(a));
 
   el.innerHTML=`
-    <div class="sgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
-      <div class="scard"><div class="sv" style="font-size:18px">${as>0?as.toFixed(1)+'h':'—'}</div><div class="sl2">평균수면</div></div>
-      <div class="scard"><div class="sv" style="font-size:18px;color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균기분</div></div>
-      <div class="scard"><div class="sv" style="font-size:18px">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균몸무게</div></div>
-      <div class="scard"><div class="sv" style="font-size:18px;color:${aG>0?(aG<100?'var(--green)':aG<126?'var(--orange)':'var(--red)'):'var(--gold)'}">${aG>0?Math.round(aG):'—'}</div><div class="sl2">평균혈당</div></div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="overflow-x:auto">
-      <table class="tbl" style="min-width:360px">
-        <thead><tr><th>날짜</th><th>수면</th><th>기분</th><th>몸무게</th><th>공복혈당</th><th>워치</th><th></th></tr></thead>
-        <tbody>
-          ${allDates.map(date=>{
-            const e=mE.find(x=>x.date===date);
-            const h=mH.find(x=>x.date===date);
-            const ts=(e||h).ts;
-            return `<tr>
-              <td style="color:var(--muted);font-size:11px">${date.slice(5)}</td>
-              <td>${e?fmtH(e.sleepHours)+'h':'—'}</td>
-              <td>${e?`<span class="bdg ${moodBadge(e.moodScore)}">${e.moodScore}</span>`:'—'}</td>
-              <td>${h&&h.weight!=null?h.weight+'kg':'—'}</td>
-              <td>${h&&h.glucose!=null?h.glucose+' '+glucoseBadge(h.glucose):'—'}</td>
-              <td>${e&&e.watchScore!=null?e.watchScore:'—'}</td>
-              <td>
-                ${e?`<button class="dbtn" onclick="delEntry('${e.ts}','sleep')">✕</button>`:''}
-                ${h?`<button class="dbtn" onclick="delEntry('${h.ts}','health')">✕</button>`:''}
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-      </div>
-    </div>`;
+<div class="sgrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+<div class="scard"><div class="sv" style="font-size:18px">${as>0?as.toFixed(1)+'h':'—'}</div><div class="sl2">평균수면</div></div>
+<div class="scard"><div class="sv" style="font-size:18px;color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균기분</div></div>
+<div class="scard"><div class="sv" style="font-size:18px">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균몸무게</div></div>
+<div class="scard"><div class="sv" style="font-size:18px;color:${aG>0?(aG<100?'var(--green)':aG<126?'var(--orange)':'var(--red)'):'var(--gold)'}">${aG>0?Math.round(aG):'—'}</div><div class="sl2">평균혈당</div></div>
+</div>
+<div class="card" style="padding:0;overflow:hidden">
+<div style="overflow-x:auto">
+<table class="tbl" style="min-width:360px">
+<thead><tr><th>날짜</th><th>수면</th><th>기분</th><th>몸무게</th><th>공복혈당</th><th>워치</th><th></th></tr></thead>
+<tbody>
+${allDates.map(date=>{
+  const e=mE.find(x=>x.date===date);
+  const h=mH.find(x=>x.date===date);
+  return `<tr>
+<td style="color:var(--muted);font-size:11px">${date.slice(5)}</td>
+<td>${e?fmtH(e.sleepHours)+'h':'—'}</td>
+<td>${e?`<span class="bdg ${moodBadge(e.moodScore)}">${e.moodScore}</span>`:'—'}</td>
+<td>${h&&h.weight!=null?h.weight+'kg':'—'}</td>
+<td>${h&&h.glucose!=null?h.glucose+' '+glucoseBadge(h.glucose):'—'}</td>
+<td>${e&&e.watchScore!=null?e.watchScore:'—'}</td>
+<td>
+${e?`<button class="dbtn" onclick="delEntry('${e.ts}','sleep')">✕</button>`:''}
+${h?`<button class="dbtn" onclick="delEntry('${h.ts}','health')">✕</button>`:''}
+</td>
+</tr>`;
+}).join('')}
+</tbody>
+</table>
+</div>
+</div>`;
 }
 
-// ── Analysis ──────────────────────────────
+// ── Analysis ───────────────────────────────
 function renderAnalysis(){
   const el=document.getElementById('analysisCont');
   if(entries.length<7){ el.innerHTML=`<div class="empty"><div class="ei">🎯</div><p>최소 <strong style="color:var(--gold)">7일</strong> 이상 기록하면<br>분석이 시작됩니다<br><br>현재: <strong style="color:var(--gold)">${entries.length}일</strong> 기록됨</p></div>`; return; }
@@ -715,38 +992,38 @@ function renderAnalysis(){
   const loW=hasWatch.filter(e=>e.watchScore<70);
 
   el.innerHTML=`
-    <div class="optcard">
-      <div style="font-size:10px;color:var(--gold);letter-spacing:1.5px;margin-bottom:8px">나의 최적 수면 시간</div>
-      <div class="opth">${optimal.h}시간</div>
-      <div class="optl">평균 기분 ${optimal.avgMood.toFixed(1)}점 / 10점</div>
-      <div class="optd">총 <strong style="color:var(--gold)">${entries.length}일</strong> 데이터 분석 결과<br><strong style="color:var(--gold)">${optimal.h}시간</strong>이 당신만의 숫자입니다</div>
-    </div>
-    <div class="card"><div class="ctitle">📊 수면시간별 기분 점수</div><div class="ch"><canvas id="chOpt"></canvas></div></div>
-    <div class="card">
-      <div class="ctitle">📋 구간별 분석</div>
-      ${buckets.map(b=>`<div class="brow">
-        <span class="blbl">${b.h}h</span>
-        <div class="bout"><div class="bin" style="width:${(b.avgMood/10)*100}%;${b.h===optimal.h?'background:var(--gold)':''}"></div></div>
-        <span class="bval">${b.avgMood.toFixed(1)}</span>
-        <span class="bcnt">(${b.cnt}일)</span>
-      </div>`).join('')}
-    </div>
-    ${hasWatch.length>=4?`<div class="card"><div class="ctitle">⌚ 워치 수면점수 분석</div>
-      <p style="font-size:13px;line-height:1.9;color:var(--text)">
-        전체 평균: <span class="hval">${Math.round(avgWA)}점</span><br>
-        ${hiW.length>=2?`80점↑ 날의 기분: <span style="color:var(--green);font-weight:700">${avg(hiW.map(e=>e.moodScore)).toFixed(1)}점</span><br>`:''}
-        ${loW.length>=2?`70점↓ 날의 기분: <span style="color:var(--red);font-weight:700">${avg(loW.map(e=>e.moodScore)).toFixed(1)}점</span>`:''}
-      </p></div>`:''}
-    <div class="card" style="background:linear-gradient(135deg,rgba(201,169,110,.06),rgba(201,169,110,.02))">
-      <div class="ctitle">💬 김경일 교수</div>
-      <div class="qb">"나에게 최적화된 수면 시간을 찾는 것이 인생을 바꾸는 첫걸음이다."</div>
-      <p style="font-size:12px;color:var(--muted);line-height:1.7">
-        ${entries.length}일 기록됨
-        ${entries.length>=30?'&nbsp;<span style="color:var(--green)">✓ 30일 달성</span>':''}
-        ${entries.length>=100?'&nbsp;<span style="color:var(--green)">✓ 100일 달성</span>':''}
-        ${entries.length>=365?'&nbsp;<span style="color:var(--gold)">🏆 365일!</span>':''}
-      </p>
-    </div>`;
+<div class="optcard">
+<div style="font-size:10px;color:var(--gold);letter-spacing:1.5px;margin-bottom:8px">나의 최적 수면 시간</div>
+<div class="opth">${optimal.h}시간</div>
+<div class="optl">평균 기분 ${optimal.avgMood.toFixed(1)}점 / 10점</div>
+<div class="optd">총 <strong style="color:var(--gold)">${entries.length}일</strong> 데이터 분석 결과<br><strong style="color:var(--gold)">${optimal.h}시간</strong>이 당신만의 숫자입니다</div>
+</div>
+<div class="card"><div class="ctitle">📊 수면시간별 기분 점수</div><div class="ch"><canvas id="chOpt"></canvas></div></div>
+<div class="card">
+<div class="ctitle">📋 구간별 분석</div>
+${buckets.map(b=>`<div class="brow">
+<span class="blbl">${b.h}h</span>
+<div class="bout"><div class="bin" style="width:${(b.avgMood/10)*100}%;${b.h===optimal.h?'background:var(--gold)':''}"></div></div>
+<span class="bval">${b.avgMood.toFixed(1)}</span>
+<span class="bcnt">(${b.cnt}일)</span>
+</div>`).join('')}
+</div>
+${hasWatch.length>=4?`<div class="card"><div class="ctitle">⌚ 워치 수면점수 분석</div>
+<p style="font-size:13px;line-height:1.9;color:var(--text)">
+전체 평균: <span class="hval">${Math.round(avgWA)}점</span><br>
+${hiW.length>=2?`80점↑ 날의 기분: <span style="color:var(--green);font-weight:700">${avg(hiW.map(e=>e.moodScore)).toFixed(1)}점</span><br>`:''}
+${loW.length>=2?`70점↓ 날의 기분: <span style="color:var(--red);font-weight:700">${avg(loW.map(e=>e.moodScore)).toFixed(1)}점</span>`:''}
+</p></div>`:''}
+<div class="card" style="background:linear-gradient(135deg,rgba(201,169,110,.06),rgba(201,169,110,.02))">
+<div class="ctitle">💬 김경일 교수</div>
+<div class="qb">"나에게 최적화된 수면 시간을 찾는 것이 인생을 바꾸는 첫걸음이다."</div>
+<p style="font-size:12px;color:var(--muted);line-height:1.7">
+${entries.length}일 기록됨
+${entries.length>=30?'&nbsp;<span style="color:var(--green)">✓ 30일 달성</span>':''}
+${entries.length>=100?'&nbsp;<span style="color:var(--green)">✓ 100일 달성</span>':''}
+${entries.length>=365?'&nbsp;<span style="color:var(--gold)">🏆 365일!</span>':''}
+</p>
+</div>`;
 
   mkChart('opt',document.getElementById('chOpt'),{type:'bar',data:{labels:buckets.map(b=>`${b.h}h`),datasets:[{data:buckets.map(b=>b.avgMood),backgroundColor:buckets.map(b=>b.h===optimal.h?'rgba(201,169,110,.95)':'rgba(201,169,110,.3)'),borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8ba3b8',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},y:{min:0,max:10,ticks:{color:'#8ba3b8',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}}}});
 }
