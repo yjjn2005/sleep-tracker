@@ -196,6 +196,21 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
 <button class="btn btn-gold" id="connectBtn">🔗 연결하기</button>
 
 <div id="syncStatusBox" style="display:none;margin-top:14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.9;color:var(--muted)"></div>
+
+<!-- 수동 Gist ID 입력 (기기 불일치 해결용) -->
+<details style="margin-top:16px">
+<summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">⚙️ 고급 — Gist ID 직접 입력</summary>
+<div style="margin-top:10px">
+<div class="ibox" style="margin-bottom:10px">
+PC 설정에서 <strong>Gist ID</strong>를 확인한 후 모바일에 붙여넣으면 확실하게 연동됩니다.
+</div>
+<div class="fg" style="margin-bottom:8px">
+<label class="fl">Gist ID (32자리)</label>
+<input type="text" id="manualGistId" class="fi" placeholder="예: d393d08153aa5ef8c17ea766cf0f872e" style="font-size:13px;font-family:monospace">
+</div>
+<button class="btn btn-gold" id="manualConnectBtn" style="margin-top:0">이 Gist ID로 연결</button>
+</div>
+</details>
 </div>
 
 <div class="card">
@@ -311,6 +326,29 @@ async function saveGist(){
   lastEtag = '';
 }
 
+// ── Gist ID 직접 연결 ──────────────────────
+async function manualConnect(){
+  const tok = document.getElementById('sToken').value.trim();
+  const id  = document.getElementById('manualGistId').value.trim();
+  if(!tok){ toast('토큰을 먼저 입력하세요'); return; }
+  if(!id || id.length < 20){ toast('Gist ID를 입력하세요 (32자리)'); return; }
+  const btn = document.getElementById('manualConnectBtn');
+  btn.disabled = true; btn.textContent = '⏳ 연결 중...';
+  try{
+    ghToken = tok; lsSet('st_token', tok);
+    gistId  = id;  lsSet('st_gist_id', id);
+    const d = await loadGist();
+    if(d){ entries = d.entries; health = d.health; saveCache(); refresh(); }
+    toast('✅ 연결 완료!');
+    startPoll(); updateStatusBox();
+  } catch(e){
+    toast('❌ ' + e.message);
+    gistId = ls('st_gist_id') || '';
+  } finally{
+    btn.disabled = false; btn.textContent = '이 Gist ID로 연결';
+  }
+}
+
 // ── 연결 ───────────────────────────────────
 async function connect(){
   const tok = document.getElementById('sToken').value.trim();
@@ -384,7 +422,17 @@ function updateStatusBox(){
   box.style.display = 'block';
   box.innerHTML = `🟢 <strong style="color:var(--green)">연동됨</strong><br>
 수면기록: <span class="hval">${entries.length}일</span> &nbsp; 건강기록: <span class="hval">${health.length}일</span><br>
-<span style="font-size:11px;color:var(--muted)">15초마다 자동 갱신 · 모든 기기 공유</span>`;
+<span style="font-size:11px;color:var(--muted)">15초마다 자동 갱신</span><br>
+<span style="font-size:10px;color:var(--muted)">Gist ID: </span><span style="font-size:10px;color:var(--gold);font-family:monospace;word-break:break-all">${gistId}</span>
+<button onclick="copyGistId()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:10px;padding:2px 7px;cursor:pointer;margin-left:6px">복사</button>`;
+  // 수동 입력란에도 현재 Gist ID 채워두기
+  const inp = document.getElementById('manualGistId');
+  if(inp && !inp.value) inp.value = gistId;
+}
+
+async function copyGistId(){
+  try{ await navigator.clipboard.writeText(gistId); toast('✅ Gist ID 복사됨'); }
+  catch{ toast('Gist ID: ' + gistId); }
 }
 
 // ── 초기화 ─────────────────────────────────
@@ -418,6 +466,7 @@ function init(){
   document.getElementById('saveHealthBtn').onclick = saveHealth;
   document.getElementById('connectBtn').onclick = connect;
   document.getElementById('clearBtn').onclick = clearCache;
+  document.getElementById('manualConnectBtn').onclick = manualConnect;
 
   const c = ls('st_cache');
   if(c){ const d=JSON.parse(c); entries=d.entries||[]; health=d.health||[]; refresh(); }
