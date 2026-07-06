@@ -197,7 +197,7 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
 
 <div id="syncStatusBox" style="display:none;margin-top:14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.9;color:var(--muted)"></div>
 
-<p style="font-size:10px;color:var(--muted);margin-top:14px;text-align:right">v3.0 · 병합 동기화</p>
+<p style="font-size:10px;color:var(--muted);margin-top:14px;text-align:right">v3.1 · 병합 동기화 · 저장소 자동 통합</p>
 </div>
 
 <div class="card">
@@ -284,7 +284,7 @@ async function fetchWithTimeout(url, opts={}, ms=15000){
 }
 
 // 내 계정의 트래커 Gist를 전부 찾아 데이터를 로컬에 병합하고,
-// 가장 먼저 만들어진 Gist ID를 반환 (모든 기기가 같은 곳으로 수렴)
+// 가장 먼저 만들어진 Gist ID로 수렴 (모든 기기가 같은 곳을 보게 됨)
 async function findAndMergeGists(){
   let page = 1; const matches = [];
   while(page <= 10){
@@ -300,6 +300,7 @@ async function findAndMergeGists(){
   if(!matches.length) return null;
   matches.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
   // 흩어진 데이터를 전부 병합 (기기마다 Gist가 따로 생긴 경우 복구)
+  const others = [];
   for(const g of matches){
     try{
       const res = await fetchWithTimeout(`https://api.github.com/gists/${g.id}`, { headers: ghH() });
@@ -308,10 +309,40 @@ async function findAndMergeGists(){
       let raw = {}; try{ raw = JSON.parse(data.files[GIST_FILENAME]?.content || '{}'); }catch{}
       entries = mergeArr(entries, raw.entries||[]);
       health  = mergeArr(health,  raw.health||[]);
+      if(g.id !== matches[0].id) others.push(g.id);
     }catch{}
   }
   saveCache();
-  return matches[0].id;
+  return { oldest: matches[0].id, others };
+}
+
+// 저장소 통합: 모든 Gist를 병합해 가장 오래된 Gist를 기준으로 삼고,
+// (구버전 앱이 남아있는 기기를 위해) 나머지 Gist에도 병합본을 복사
+let unifying = false;
+async function unifyGists(rethrow=false){
+  if(!ghToken || unifying) return;
+  unifying = true;
+  try{
+    const r = await findAndMergeGists();
+    if(!r){ unifying = false; return; }
+    if(gistId !== r.oldest){ gistId = r.oldest; lsSet('st_gist_id', gistId); lastEtag=''; }
+    dirty = true;
+    await sync(true, true);
+    const content = JSON.stringify({entries, health});
+    for(const id of r.others){
+      try{
+        await fetchWithTimeout(`https://api.github.com/gists/${id}`, {
+          method:'PATCH', headers:ghH(),
+          body: JSON.stringify({ files:{ [GIST_FILENAME]:{ content } } })
+        });
+      }catch{}
+    }
+  }catch(e){
+    setSync('err','🔴 ' + e.message);
+    if(rethrow) throw e;
+  }finally{
+    unifying = false;
+  }
 }
 
 async function createGist(){
@@ -396,31 +427,16 @@ async function connect(){
     ghToken = tok; lsSet('st_token', tok);
     lastEtag = '';
 
-    // 저장된 Gist ID가 있으면 우선 시도, 없거나 실패하면 검색/생성
-    let id = gistId;
-    if(!id){
-      toast('🔍 기존 데이터 검색 중...');
-      id = await findAndMergeGists();
-    }
-    if(!id){
+    toast('🔍 기존 데이터 검색 중...');
+    const r = await findAndMergeGists();
+    if(!r){
       toast('✨ 새 저장소 생성 중...');
-      id = await createGist();
-    }
-    gistId = id; lsSet('st_gist_id', id);
-
-    dirty = true; // 로컬 기록을 병합해서 올림
-    try{
+      gistId = await createGist();
+      lsSet('st_gist_id', gistId);
+      dirty = true;
       await sync(true, true);
-    }catch(e){
-      if(e.notFound){
-        // 저장된 ID의 Gist가 삭제된 경우 → 재검색/재생성 후 1회 재시도
-        gistId = '';
-        let nid = await findAndMergeGists();
-        if(!nid) nid = await createGist();
-        gistId = nid; lsSet('st_gist_id', nid);
-        dirty = true;
-        await sync(true, true);
-      } else throw e;
+    }else{
+      await unifyGists(true); // 모든 저장소 병합 → 하나로 통합
     }
 
     toast('✅ 연동 완료!');
@@ -490,6 +506,9 @@ function init(){
     setSync('sync','🟡 연결 중...');
     startPoll();
     updateStatusBox();
+    // 시작 시 + 5분마다 흩어진 저장소를 자동 통합 (기기간 불일치 자가 복구)
+    unifyGists();
+    setInterval(()=>unifyGists(), 5*60*1000);
   }
 
   // 화면으로 돌아올 때마다 즉시 동기화 (모바일↔PC 전환 시 최신 반영)
