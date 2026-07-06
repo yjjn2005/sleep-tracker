@@ -246,11 +246,24 @@ function mkChart(n,ctx,cfg){ killChart(n);charts[n]=new Chart(ctx,cfg); }
 // ── GitHub API ─────────────────────────────
 const ghH = () => ({ Authorization:`token ${ghToken}`, 'Content-Type':'application/json' });
 
-// 내 Gist 목록에서 sleep-tracker-data.json 파일이 있는 것 찾기
+async function fetchWithTimeout(url, opts={}, ms=10000){
+  const ctrl = new AbortController();
+  const tid = setTimeout(()=>ctrl.abort(), ms);
+  try{
+    const res = await fetch(url, {...opts, signal:ctrl.signal});
+    clearTimeout(tid);
+    return res;
+  } catch(e){
+    clearTimeout(tid);
+    if(e.name==='AbortError') throw new Error('네트워크 시간 초과 — 인터넷 연결 확인');
+    throw e;
+  }
+}
+
 async function findMyGist(){
   let page = 1;
   while(true){
-    const res = await fetch(`https://api.github.com/gists?per_page=100&page=${page}`, { headers: ghH() });
+    const res = await fetchWithTimeout(`https://api.github.com/gists?per_page=100&page=${page}`, { headers: ghH() });
     if(!res.ok) throw new Error(`인증 실패 (${res.status}) — 토큰을 확인하세요`);
     const list = await res.json();
     if(!list.length) break;
@@ -263,7 +276,7 @@ async function findMyGist(){
 }
 
 async function createGist(){
-  const res = await fetch('https://api.github.com/gists', {
+  const res = await fetchWithTimeout('https://api.github.com/gists', {
     method:'POST', headers:ghH(),
     body: JSON.stringify({
       description: '💤 수면 & 건강 트래커 데이터',
@@ -279,7 +292,7 @@ async function createGist(){
 async function loadGist(){
   if(!gistId) return null;
   const hdrs = { ...ghH(), ...(lastEtag ? {'If-None-Match':lastEtag} : {}) };
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: hdrs });
+  const res = await fetchWithTimeout(`https://api.github.com/gists/${gistId}`, { headers: hdrs });
   if(res.status === 304) return null;
   if(!res.ok) throw new Error(`로드 실패 (${res.status})`);
   lastEtag = res.headers.get('ETag') || '';
@@ -290,7 +303,7 @@ async function loadGist(){
 
 async function saveGist(){
   if(!gistId || !ghToken) return;
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const res = await fetchWithTimeout(`https://api.github.com/gists/${gistId}`, {
     method:'PATCH', headers:ghH(),
     body: JSON.stringify({ files:{ [GIST_FILENAME]:{ content:JSON.stringify({entries,health}) } } })
   });
