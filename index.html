@@ -151,6 +151,16 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
 </div>
 </div>
 </div>
+<div class="fg" style="margin-top:14px;margin-bottom:0">
+<label class="fl">📏 키 <span style="color:var(--muted);font-weight:400">(BMI 계산용 · 한 번만 입력하면 저장됩니다)</span></label>
+<div class="num-wrap">
+<button class="num-btn" data-target="eHeight" data-step="1" data-dir="-1">−</button>
+<input type="number" id="eHeight" class="num-input" placeholder="—" min="100" max="220" step="1">
+<span class="num-unit">cm</span>
+<button class="num-btn" data-target="eHeight" data-step="1" data-dir="1">+</button>
+</div>
+</div>
+<div id="bmiBox" class="ibox" style="display:none;margin:12px 0 0;font-size:14px"></div>
 <button class="btn btn-gold" id="saveHealthBtn" style="margin-top:14px">💾 건강 기록 저장</button>
 </div>
 <div id="todayCard"></div>
@@ -197,7 +207,7 @@ input[type=date].fi::-webkit-calendar-picker-indicator{filter:invert(.5)}
 
 <div id="syncStatusBox" style="display:none;margin-top:14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.9;color:var(--muted)"></div>
 
-<p style="font-size:10px;color:var(--muted);margin-top:14px;text-align:right">v3.1 · 병합 동기화 · 저장소 자동 통합</p>
+<p style="font-size:10px;color:var(--muted);margin-top:14px;text-align:right">v3.2 · 병합 동기화 · 저장소 자동 통합 · BMI</p>
 </div>
 
 <div class="card">
@@ -227,6 +237,7 @@ const GIST_FILENAME = 'sleep-tracker-data.json';
 const POLL_MS = 20000;
 
 let entries = [], health = [];   // tombstone 포함 전체 (deleted:true 포함)
+let profile = {};                // {heightCm, ts} — 키 등 개인 정보 (기기간 동기화)
 let ghToken = ls('st_token') || '';
 let gistId  = ls('st_gist_id') || '';
 let selMood = 0, curMonth = new Date();
@@ -253,7 +264,27 @@ function setOk(){ const t=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',
 function toast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2600); }
 function killChart(n){ if(charts[n]){charts[n].destroy();delete charts[n]} }
 function mkChart(n,ctx,cfg){ killChart(n);charts[n]=new Chart(ctx,cfg); }
-function saveCache(){ lsSet('st_cache', JSON.stringify({entries,health})); }
+function saveCache(){ lsSet('st_cache', JSON.stringify({entries,health,profile})); }
+
+// ── BMI ────────────────────────────────────
+function bmiOf(w,hcm){ if(!w||!hcm) return null; const m=hcm/100; return w/(m*m); }
+function bmiInfo(b){ if(b<18.5) return {t:'저체중',c:'bo'}; if(b<23) return {t:'정상',c:'bg'}; if(b<25) return {t:'과체중',c:'bo'}; return {t:'비만',c:'br'}; }
+function bmiColor(b){ const i=bmiInfo(b); return i.c==='bg'?'var(--green)':i.c==='bo'?'var(--orange)':'var(--red)'; }
+function updateBmiBox(){
+  const box=document.getElementById('bmiBox');
+  const w=parseFloat(document.getElementById('eWeight').value);
+  const hcm=parseFloat(document.getElementById('eHeight').value)||profile.heightCm;
+  const b=bmiOf(w,hcm);
+  if(!b){ box.style.display='none'; return; }
+  const i=bmiInfo(b);
+  box.style.display='block';
+  box.innerHTML=`BMI: <strong style="font-size:18px">${b.toFixed(1)}</strong> <span class="bdg ${i.c}">${i.t}</span> <span style="font-size:11px;color:var(--muted)">(키 ${hcm}cm 기준 · 정상 18.5–23)</span>`;
+}
+function mergeProf(a,b){
+  a=(a&&a.heightCm)?a:null; b=(b&&b.heightCm)?b:null;
+  if(!a) return b||{}; if(!b) return a;
+  return (b.ts||0)>=(a.ts||0)?b:a;
+}
 
 // ── 병합: 날짜별로 ts(수정시각)가 최신인 기록이 이김 ──────────
 function mergeArr(a,b){
@@ -309,6 +340,7 @@ async function findAndMergeGists(){
       let raw = {}; try{ raw = JSON.parse(data.files[GIST_FILENAME]?.content || '{}'); }catch{}
       entries = mergeArr(entries, raw.entries||[]);
       health  = mergeArr(health,  raw.health||[]);
+      profile = mergeProf(profile, raw.profile||{});
       if(g.id !== matches[0].id) others.push(g.id);
     }catch{}
   }
@@ -328,7 +360,7 @@ async function unifyGists(rethrow=false){
     if(gistId !== r.oldest){ gistId = r.oldest; lsSet('st_gist_id', gistId); lastEtag=''; }
     dirty = true;
     await sync(true, true);
-    const content = JSON.stringify({entries, health});
+    const content = JSON.stringify({entries, health, profile});
     for(const id of r.others){
       try{
         await fetchWithTimeout(`https://api.github.com/gists/${id}`, {
@@ -370,7 +402,7 @@ async function loadGist(useEtag){
   lastEtag = res.headers.get('ETag') || '';
   const data = await res.json();
   let raw = {}; try{ raw = JSON.parse(data.files[GIST_FILENAME]?.content || '{}'); }catch{}
-  return { entries: raw.entries||[], health: raw.health||[] };
+  return { entries: raw.entries||[], health: raw.health||[], profile: raw.profile||{} };
 }
 
 async function saveGistContent(str){
@@ -392,9 +424,10 @@ async function sync(force=false, rethrow=false){
     if(r.unchanged){ setOk(); return; }
     const mE = mergeArr(r.entries, entries);
     const mH = mergeArr(r.health, health);
-    const remoteStr = JSON.stringify({entries:mergeArr(r.entries,[]),health:mergeArr(r.health,[])});
-    const mergedStr = JSON.stringify({entries:mE,health:mH});
-    entries = mE; health = mH;
+    const mP = mergeProf(r.profile, profile);
+    const remoteStr = JSON.stringify({entries:mergeArr(r.entries,[]),health:mergeArr(r.health,[]),profile:mergeProf(r.profile,null)});
+    const mergedStr = JSON.stringify({entries:mE,health:mH,profile:mP});
+    entries = mE; health = mH; profile = mP;
     saveCache(); refresh();
     if(mergedStr !== remoteStr){
       setSync('sync','🟡 저장 중...');
@@ -485,9 +518,13 @@ function init(){
       const cur=parseFloat(inp.value)||0;
       const next=Math.round((cur+step*dir)*10)/10;
       const mn=parseFloat(inp.min)||0, mx=parseFloat(inp.max)||9999;
-      if(next>=mn&&next<=mx) inp.value=next;
+      if(next>=mn&&next<=mx){ inp.value=next; inp.dispatchEvent(new Event('input',{bubbles:true})); }
     });
   });
+
+  // BMI 실시간 표시
+  document.getElementById('eWeight').addEventListener('input', updateBmiBox);
+  document.getElementById('eHeight').addEventListener('input', updateBmiBox);
 
   updateMDisp();
   document.getElementById('mPrev').onclick=()=>{ shiftMonth(-1);renderMonth(); };
@@ -499,7 +536,8 @@ function init(){
   document.getElementById('clearBtn').onclick = clearCache;
 
   const c = ls('st_cache');
-  if(c){ try{ const d=JSON.parse(c); entries=d.entries||[]; health=d.health||[]; }catch{} refresh(); }
+  if(c){ try{ const d=JSON.parse(c); entries=d.entries||[]; health=d.health||[]; profile=d.profile||{}; }catch{} refresh(); }
+  if(profile.heightCm) document.getElementById('eHeight').value = profile.heightCm;
 
   if(ghToken){
     document.getElementById('sToken').value = ghToken;
@@ -584,6 +622,13 @@ async function saveHealth(){
   if(!date){toast('날짜를 선택하세요');return;}
   if(weight===null&&glucose===null){toast('몸무게 또는 공복혈당을 입력하세요');return;}
 
+  // 키 저장 (변경 시에만) — 기기간 동기화됨
+  const hRaw=document.getElementById('eHeight').value;
+  const heightCm=hRaw!==''?parseFloat(hRaw):null;
+  if(heightCm && heightCm>=100 && heightCm<=220 && heightCm!==profile.heightCm){
+    profile={heightCm, ts:Date.now()};
+  }
+
   const rec={date,weight,glucose,deleted:false,ts:Date.now()};
   upsert(health,rec); saveCache(); refresh();
   toast('✅ 건강 기록 저장됨');
@@ -592,6 +637,7 @@ async function saveHealth(){
 
   document.getElementById('eWeight').value='';
   document.getElementById('eGlucose').value='';
+  updateBmiBox();
   const sleepRec=live(entries).find(e=>e.date===date)||null;
   const healthRec=live(health).find(e=>e.date===date)||rec;
   showTodayCard(sleepRec,healthRec);
@@ -606,6 +652,7 @@ function showTodayCard(sleep,hlth){
 ${s?`수면: <span class="hval">${fmtH(s.sleepHours)}h</span> &nbsp; 기분: <span style="color:${moodColor(s.moodScore)}">${s.moodScore}/10</span>${s.watchScore!=null?` &nbsp; 워치: <span class="hval">${s.watchScore}점</span>`:''}`:''}
 ${s&&h?'<br>':''}
 ${h?`${h.weight!=null?`몸무게: <span class="hval">${h.weight}kg</span> &nbsp;`:''}${h.glucose!=null?`공복혈당: <span class="hval">${h.glucose}mg/dL</span> ${glucoseBadge(h.glucose)}`:''}`:''}
+${(()=>{const b=h&&h.weight!=null?bmiOf(h.weight,profile.heightCm):null; if(!b)return ''; const i=bmiInfo(b); return `<br>BMI: <span class="hval">${b.toFixed(1)}</span> <span class="bdg ${i.c}">${i.t}</span>`;})()}
 </p></div>`;
 }
 
@@ -664,11 +711,16 @@ function renderDash(){
 <div class="scard"><div class="sv" style="color:${am>0?moodColor(am):'var(--gold)'}">${am>0?am.toFixed(1):'—'}</div><div class="sl2">평균 기분</div></div>
 <div class="scard"><div class="sv">${E.length}</div><div class="sl2">수면 기록일</div></div>
 </div>
-<div class="sgrid3">
-<div class="scard"><div class="sv">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균 몸무게</div></div>
-<div class="scard"><div class="sv" style="color:${glucoseColor}">${aG>0?Math.round(aG):'—'}<span class="su">mg</span></div><div class="sl2">평균 공복혈당</div></div>
-<div class="scard"><div class="sv">${H.length}</div><div class="sl2">건강 기록일</div></div>
-</div>
+${(()=>{
+  const lastW=[...H].sort((a,b)=>b.date.localeCompare(a.date)).find(e=>e.weight!=null);
+  const b=lastW?bmiOf(lastW.weight,profile.heightCm):null;
+  const bmiCard=b?`<div class="scard"><div class="sv" style="color:${bmiColor(b)}">${b.toFixed(1)}</div><div class="sl2">BMI (${bmiInfo(b).t})</div></div>`:'';
+  return `<div class="sgrid" style="grid-template-columns:repeat(${b?4:3},1fr)">
+<div class="scard"><div class="sv" style="font-size:19px">${aW>0?aW.toFixed(1):'—'}<span class="su">kg</span></div><div class="sl2">평균 몸무게</div></div>
+${bmiCard}
+<div class="scard"><div class="sv" style="font-size:19px;color:${glucoseColor}">${aG>0?Math.round(aG):'—'}<span class="su">mg</span></div><div class="sl2">평균 공복혈당</div></div>
+<div class="scard"><div class="sv" style="font-size:19px">${H.length}</div><div class="sl2">건강 기록일</div></div>
+</div>`;})()}
 ${r30E.length?`<div class="card"><div class="ctitle">📈 수면 시간 (최근 30일)</div><div class="ch"><canvas id="chSleep"></canvas></div></div>`:''}
 ${r30E.length?`<div class="card"><div class="ctitle">😊 기분 점수 추이</div><div class="ch"><canvas id="chMood"></canvas></div></div>`:''}
 ${r30H.filter(e=>e.weight!=null).length>=2?`<div class="card"><div class="ctitle">⚖️ 몸무게 추이</div><div class="ch"><canvas id="chWeight"></canvas></div></div>`:''}
